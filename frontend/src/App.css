@@ -1,0 +1,28 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  background-color: var(--card-bg);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.app-header h1 {
+  text-align: center;
+  color: var(--primary-color);
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+

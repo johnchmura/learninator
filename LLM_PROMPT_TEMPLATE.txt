@@ -1,0 +1,28 @@
+Generate a quiz on [TOPIC] with [NUMBER] multiple choice questions. 
+Return ONLY valid JSON in this exact format:
+[
+  {
+    "question": "question text here",
+    "options": ["option A", "option B", "option C", "option D"],
+    "correctAnswer": 0
+  }
+]
+where correctAnswer is the index (0-3) of the correct option.
+
+
+=== EXAMPLE USAGE ===
+
+Replace [TOPIC] with your subject (e.g., "Python programming", "World History", "Biology")
+Replace [NUMBER] with how many questions you want (e.g., 5, 10, 20)
+
+Example:
+"Generate a quiz on Python programming with 10 multiple choice questions."
+
+
+=== IMPORTANT NOTES ===
+
+1. Make sure the LLM returns ONLY the JSON array, no extra text
+2. Each question must have exactly 4 options
+3. correctAnswer must be 0, 1, 2, or 3 (the index of the correct option)
+4. If the LLM adds markdown formatting (like ```json), remove it before pasting
+
