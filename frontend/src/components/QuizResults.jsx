@@ -1,7 +1,8 @@
 import './QuizResults.css'
 
-function QuizResults({ results, onRestart }) {
-  const { score, total, percentage, results: questionResults } = results
+function QuizResults({ results, quizMode, onRestart }) {
+  const { score, total, percentage, totalAttempts, results: questionResults } = results
+  const totalIncorrectAttempts = questionResults.reduce((sum, r) => sum + (r.incorrectAttempts || 0), 0)
 
   const getScoreColor = (pct) => {
     if (pct >= 80) return 'excellent'
@@ -35,11 +36,14 @@ function QuizResults({ results, onRestart }) {
           <span className="summary-value">{score}</span>
         </div>
         <div className="summary-item incorrect">
-          <span className="summary-label">Incorrect</span>
-          <span className="summary-value">{total - score}</span>
+          <span className="summary-label">Incorrect Attempts</span>
+          <span className="summary-value">{quizMode === 'instant' ? totalIncorrectAttempts : total - score}</span>
+          {quizMode === 'instant' && totalIncorrectAttempts > 0 && (
+            <span className="summary-sublabel">before mastery</span>
+          )}
         </div>
         <div className="summary-item total">
-          <span className="summary-label">Total</span>
+          <span className="summary-label">Total Questions</span>
           <span className="summary-value">{total}</span>
         </div>
       </div>
@@ -75,6 +79,13 @@ function QuizResults({ results, onRestart }) {
               <p className="reasoning-label">Explanation:</p>
               <p className="reasoning-text">{result.reasoning}</p>
             </div>
+            {quizMode === 'instant' && result.incorrectAttempts > 0 && (
+              <div className="result-attempts">
+                <span className="attempts-badge">
+                  {result.incorrectAttempts} incorrect attempt{result.incorrectAttempts !== 1 ? 's' : ''} before mastery
+                </span>
+              </div>
+            )}
           </div>
         ))}
       </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './QuizQuestion.css'
 
 function QuizQuestion({ 
@@ -6,49 +6,68 @@ function QuizQuestion({
   currentQuestion, 
   userAnswers, 
   quizMode,
+  totalOriginalQuestions,
+  masteredCount,
+  attemptCount,
   onAnswerSelect, 
   onNext, 
   onPrevious, 
   onSubmit 
 }) {
   const [showFeedback, setShowFeedback] = useState(false)
+  const [selectedAnswer, setSelectedAnswer] = useState(-1)
   
   const question = questions[currentQuestion]
   const isFirstQuestion = currentQuestion === 0
   const isLastQuestion = currentQuestion === questions.length - 1
-  const hasAnsweredCurrent = userAnswers[currentQuestion] !== -1
-  const allAnswered = userAnswers.every(answer => answer !== -1)
-  const userAnswer = userAnswers[currentQuestion]
+  const hasAnsweredCurrent = quizMode === 'end' && userAnswers[currentQuestion] !== -1
+  const allAnswered = quizMode === 'end' && userAnswers.every(answer => answer !== -1)
+  const userAnswer = quizMode === 'end' ? userAnswers[currentQuestion] : selectedAnswer
   const isCorrect = userAnswer === question.correctAnswer
 
+  // Reset state when question changes
+  useEffect(() => {
+    setShowFeedback(false)
+    setSelectedAnswer(-1)
+  }, [currentQuestion, questions, question])
+
   const handleOptionClick = (optionIndex) => {
-    if (quizMode === 'instant' && hasAnsweredCurrent) {
-      return // Don't allow changing answer in instant mode
-    }
-    
-    onAnswerSelect(currentQuestion, optionIndex)
-    
     if (quizMode === 'instant') {
+      if (selectedAnswer !== -1) {
+        return // Already answered this question
+      }
+      
+      setSelectedAnswer(optionIndex)
       setShowFeedback(true)
+      
+    } else {
+      // End mode - just record the answer
+      onAnswerSelect(optionIndex, false)
     }
+  }
+
+  const handleInstantModeNext = () => {
+    const correct = selectedAnswer === question.correctAnswer
+    onAnswerSelect(selectedAnswer, correct)
   }
 
   const handleNextClick = () => {
     setShowFeedback(false)
+    setSelectedAnswer(-1)
     onNext()
   }
 
   const getOptionClassName = (index) => {
     let className = 'option-btn'
     
-    if (quizMode === 'instant' && hasAnsweredCurrent) {
-      // Show correct/incorrect in instant mode
+    if (quizMode === 'instant' && selectedAnswer !== -1) {
+      // Show correct/incorrect in instant mode after selection
       if (index === question.correctAnswer) {
         className += ' correct'
-      } else if (index === userAnswer) {
+      } else if (index === selectedAnswer) {
         className += ' incorrect'
       }
-    } else if (userAnswer === index) {
+    } else if (quizMode === 'end' && userAnswer === index) {
       className += ' selected'
     }
     
@@ -58,15 +77,33 @@ function QuizQuestion({
   return (
     <div className="quiz-question-container">
       <div className="quiz-progress">
-        <div className="progress-text">
-          Question {currentQuestion + 1} of {questions.length}
-        </div>
-        <div className="progress-bar">
-          <div 
-            className="progress-fill" 
-            style={{ width: `${((currentQuestion + 1) / questions.length) * 100}%` }}
-          />
-        </div>
+        {quizMode === 'instant' ? (
+          <>
+            <div className="progress-text">
+              {questions.length} question{questions.length !== 1 ? 's' : ''} remaining | 
+              {masteredCount} of {totalOriginalQuestions} mastered | 
+              {attemptCount} total attempts
+            </div>
+            <div className="progress-bar">
+              <div 
+                className="progress-fill" 
+                style={{ width: `${(masteredCount / totalOriginalQuestions) * 100}%` }}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="progress-text">
+              Question {currentQuestion + 1} of {questions.length}
+            </div>
+            <div className="progress-bar">
+              <div 
+                className="progress-fill" 
+                style={{ width: `${((currentQuestion + 1) / questions.length) * 100}%` }}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       <div className="question-card">
@@ -78,7 +115,7 @@ function QuizQuestion({
               key={index}
               className={getOptionClassName(index)}
               onClick={() => handleOptionClick(index)}
-              disabled={quizMode === 'instant' && hasAnsweredCurrent}
+              disabled={(quizMode === 'instant' && selectedAnswer !== -1)}
             >
               <span className="option-letter">{String.fromCharCode(65 + index)}</span>
               <span className="option-text">{option}</span>
@@ -86,18 +123,18 @@ function QuizQuestion({
           ))}
         </div>
 
-        {quizMode === 'instant' && showFeedback && hasAnsweredCurrent && (
+        {quizMode === 'instant' && showFeedback && selectedAnswer !== -1 && (
           <div className={`feedback-box ${isCorrect ? 'feedback-correct' : 'feedback-incorrect'}`}>
             <div className="feedback-header">
               {isCorrect ? (
                 <>
                   <span className="feedback-icon">✓</span>
-                  <strong>Correct!</strong>
+                  <strong>Correct! Question mastered!</strong>
                 </>
               ) : (
                 <>
                   <span className="feedback-icon">✗</span>
-                  <strong>Incorrect</strong>
+                  <strong>Incorrect - This question will appear again</strong>
                 </>
               )}
             </div>
@@ -105,54 +142,63 @@ function QuizQuestion({
               <p><strong>Explanation:</strong></p>
               <p>{question.reasoning}</p>
             </div>
+            <div className="feedback-actions">
+              <button onClick={handleInstantModeNext} className="next-question-btn primary-btn">
+                Continue
+              </button>
+            </div>
           </div>
         )}
       </div>
 
-      <div className="navigation-buttons">
-        <button
-          onClick={onPrevious}
-          disabled={isFirstQuestion || (quizMode === 'instant' && !hasAnsweredCurrent)}
-          className="nav-btn secondary-btn"
-        >
-          Previous
-        </button>
+      {quizMode === 'end' && (
+        <div className="navigation-buttons">
+          <button
+            onClick={onPrevious}
+            disabled={isFirstQuestion}
+            className="nav-btn secondary-btn"
+          >
+            Previous
+          </button>
 
-        <div className="answer-status">
-          {hasAnsweredCurrent ? (
-            <span className="answered">Answered</span>
+          <div className="answer-status">
+            {hasAnsweredCurrent ? (
+              <span className="answered">Answered</span>
+            ) : (
+              <span className="not-answered">Select an answer</span>
+            )}
+          </div>
+
+          {!isLastQuestion ? (
+            <button
+              onClick={handleNextClick}
+              disabled={!hasAnsweredCurrent}
+              className="nav-btn primary-btn"
+            >
+              Next
+            </button>
           ) : (
-            <span className="not-answered">Select an answer</span>
+            <button
+              onClick={onSubmit}
+              disabled={!allAnswered}
+              className="nav-btn submit-btn"
+            >
+              {allAnswered ? 'Submit Quiz' : 'Answer all questions'}
+            </button>
           )}
         </div>
+      )}
 
-        {!isLastQuestion ? (
-          <button
-            onClick={handleNextClick}
-            disabled={!hasAnsweredCurrent}
-            className="nav-btn primary-btn"
-          >
-            Next
-          </button>
-        ) : (
-          <button
-            onClick={onSubmit}
-            disabled={!allAnswered}
-            className="nav-btn submit-btn"
-          >
-            {allAnswered ? 'Submit Quiz' : 'Answer all questions'}
-          </button>
-        )}
-      </div>
-
-      <div className="question-indicators">
-        {questions.map((_, index) => (
-          <div
-            key={index}
-            className={`indicator ${index === currentQuestion ? 'current' : ''} ${userAnswers[index] !== -1 ? 'answered' : ''}`}
-          />
-        ))}
-      </div>
+      {quizMode === 'end' && (
+        <div className="question-indicators">
+          {questions.map((_, index) => (
+            <div
+              key={index}
+              className={`indicator ${index === currentQuestion ? 'current' : ''} ${userAnswers[index] !== -1 ? 'answered' : ''}`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

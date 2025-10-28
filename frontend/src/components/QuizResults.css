@@ -72,7 +72,7 @@
 
 .results-summary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 16px;
   margin-bottom: 40px;
 }
@@ -108,6 +108,14 @@
   font-size: 32px;
   font-weight: 700;
   color: var(--text-primary);
+}
+
+.summary-sublabel {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  font-weight: 400;
 }
 
 .results-details {
@@ -225,6 +233,22 @@
   line-height: 1.6;
   font-size: 14px;
   margin: 0;
+}
+
+.result-attempts {
+  margin-top: 12px;
+  padding-top: 8px;
+}
+
+.attempts-badge {
+  display: inline-block;
+  background-color: #fef3c7;
+  color: #92400e;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid #fbbf24;
 }
 
 .restart-btn {

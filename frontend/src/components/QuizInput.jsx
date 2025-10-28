@@ -127,8 +127,8 @@ where correctAnswer is the index (0-3) of the correct option, and reasoning expl
                 onChange={(e) => setQuizMode(e.target.value)}
               />
               <div className="mode-info">
-                <strong>Instant Feedback</strong>
-                <p>See if you're right or wrong immediately after each answer with explanations</p>
+                <strong>Instant Feedback (Mastery Mode)</strong>
+                <p>See results immediately with explanations. Wrong answers are added back to the queue - keep going until you master them all!</p>
               </div>
             </label>
             <label className={`mode-option ${quizMode === 'end' ? 'selected' : ''}`}>
