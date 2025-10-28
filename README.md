@@ -1,15 +1,16 @@
-# Learninator - Quiz App with Mastery Mode
+# Learninator - Multi-Game Learning Platform
 
-A modern, interactive quiz application designed for effective learning. Paste JSON-formatted quiz questions and take quizzes with instant feedback or traditional testing modes. Features a unique **Mastery Mode** that ensures you truly understand the material before moving on.
+A modern, interactive learning platform where you **generate content once and learn in many ways**. Create learning sets with LLMs, then practice through multiple game formats including quiz mode, meteor drop (coming soon), flashcards (coming soon), and more!
 
 ## Table of Contents
 - [Features](#features)
 - [Quick Start](#quick-start)
-- [Quiz Modes](#quiz-modes)
-- [Creating Quizzes](#creating-quizzes)
+- [Architecture](#architecture)
+- [Learning Games](#learning-games)
+- [Creating Learning Sets](#creating-learning-sets)
+- [Progress Tracking](#progress-tracking)
 - [Project Structure](#project-structure)
 - [Manual Setup](#manual-setup)
-- [Usage Guide](#usage-guide)
 - [API Documentation](#api-documentation)
 - [Troubleshooting](#troubleshooting)
 - [Development](#development)
@@ -18,22 +19,23 @@ A modern, interactive quiz application designed for effective learning. Paste JS
 
 ## Features
 
-### Core Features
-- **Instant Feedback (Mastery Mode)**: Wrong answers loop back until you master them all
-- **Traditional Quiz Mode**: Complete all questions first, then review
-- **LLM Integration**: Generate quizzes with ChatGPT, Claude, or any LLM
-- **Detailed Explanations**: Every question includes reasoning for the correct answer
-- **Progress Tracking**: See questions remaining, mastered count, and incorrect attempts
-- **Visual Feedback**: Color-coded answers (green for correct, red for incorrect)
-- **Clean, Modern UI**: Responsive design with smooth animations
-- **No Database Required**: All data stored in memory for privacy
+### Core Platform Features
+- **Universal Data Format**: Generate content once, use across all games
+- **Multiple Learning Games**: Quiz, Meteor Drop, Flashcards, and more (expanding)
+- **Mastery Tracking**: Track progress across all games with unified progress system
+- **Game Hub**: Central dashboard to choose learning games and view progress
+- **localStorage Persistence**: All your content and progress saved locally
+- **LLM Integration**: Generate learning sets with ChatGPT, Claude, or any LLM
+- **No Database Required**: Privacy-first with local-only storage
+- **Modern UI**: Beautiful, responsive design with smooth animations
 
 ### Learning Benefits
 - **Active Recall**: Forces retrieval of information for better retention
 - **Immediate Feedback**: Learn from mistakes right away
-- **Spaced Repetition**: Wrong answers return after other questions
+- **Spaced Repetition**: Built-in algorithm schedules review sessions
 - **Mastery-Based Learning**: Can't skip questions you don't understand
-- **Metacognition**: Track which questions you struggled with
+- **Variety**: Different games for different learning styles and moods
+- **Progress Visibility**: See improvement over time with detailed statistics
 
 ---
 
@@ -50,136 +52,245 @@ A modern, interactive quiz application designed for effective learning. Paste JS
    Visit `http://localhost:5173`
 
 3. **Start learning!**
-   - Click "Load Example" or paste your own quiz JSON
-   - Choose Instant Feedback or Results at End mode
-   - Start the quiz
+   - Paste JSON from your LLM or click "Use Example"
+   - Navigate to the Game Hub
+   - Choose your learning game
+   - Start playing and mastering!
 
 **To stop:** Press `Ctrl+C` in the terminal
 
 ### What the Script Does
 - Creates conda environment "learn" for the backend
 - Installs all backend dependencies
-- Installs all frontend dependencies (creates package-lock.json)
+- Installs all frontend dependencies
 - Starts both servers automatically
 - Shows live logs
 
-### If You Encounter Errors
-```bash
-./cleanup.sh  # Clean up corrupted dependencies
-./start.sh    # Try again
+---
+
+## Architecture
+
+### The Learninator Way
+
+**Generate once → Choose game → Learn in your style → Track mastery**
+
+```
+┌──────────────────────────────────────┐
+│  1. Create Learning Set              │
+│  (Home Page)                         │
+│  - Paste JSON from LLM               │
+│  - Load saved topics                 │
+└─────────────┬────────────────────────┘
+              │
+              ▼
+┌──────────────────────────────────────┐
+│  2. Choose Your Game                 │
+│  (Game Hub)                          │
+│  - See progress stats                │
+│  - Select learning game              │
+└─────────────┬────────────────────────┘
+              │
+    ┌─────────┼─────────┐
+    │         │         │
+    ▼         ▼         ▼
+┌──────┐ ┌────────┐ ┌──────┐
+│ Quiz │ │ Meteor │ │Flash │
+│ Mode │ │  Drop  │ │Cards │
+└──────┘ └────────┘ └──────┘
+    │         │         │
+    └─────────┼─────────┘
+              │
+              ▼
+┌──────────────────────────────────────┐
+│  3. Track Progress                   │
+│  (Stats Page)                        │
+│  - Mastery levels                    │
+│  - Per-question analytics            │
+│  - Game statistics                   │
+└──────────────────────────────────────┘
 ```
 
----
+### Universal Data Format
 
-## Quiz Modes
+All games use the same standardized question format:
 
-### 1. Instant Feedback (Mastery Mode) 🎯
+```json
+{
+  "topic": "Python Programming",
+  "difficulty": "medium",
+  "items": [
+    {
+      "id": "q_abc123",
+      "question": "What is a list comprehension?",
+      "answer": "A concise way to create lists",
+      "options": [
+        "A concise way to create lists",
+        "A type of loop",
+        "A function decorator",
+        "A class method"
+      ],
+      "correctIndex": 0,
+      "explanation": "List comprehensions provide a concise way to create lists...",
+      "category": "Data Structures",
+      "difficulty": "medium"
+    }
+  ]
+}
+```
 
-**Perfect for active learning and skill building**
-
-How it works:
-1. Answer a question
-2. See immediate feedback (✓ correct or ✗ incorrect) 
-3. Read the explanation
-4. Click "Continue" to move on
-5. **Wrong answers?** They're added back to the end of the queue
-6. Keep going until you've mastered 100% of questions
-
-Features:
-- Green checkmark for correct answers
-- Red X for incorrect answers
-- Detailed explanations after each answer
-- Progress tracking: "3 questions remaining | 2 of 5 mastered | 7 total attempts"
-- Can't skip or go back (encourages focus)
-- Results show incorrect attempts per question
-
-**Best for:** Learning new material, exam prep, skill mastery
-
-### 2. Results at End Mode 📝
-
-**Traditional quiz experience for self-testing**
-
-How it works:
-1. Answer all questions at your own pace
-2. Navigate freely between questions
-3. Submit when complete
-4. See full results with explanations
-
-Features:
-- Progress indicators
-- Previous/Next navigation
-- Question status dots
-- Complete score breakdown
-- All explanations at the end
-
-**Best for:** Testing yourself, progress checks, quick assessments
+This universal format is automatically adapted for each game type.
 
 ---
 
-## Creating Quizzes
+## Learning Games
+
+### 1. Quiz Mode (Available Now) 📝
+
+Classic quiz experience with two modes:
+
+#### Mastery Mode (Instant Feedback)
+- Answer questions one at a time
+- Get immediate feedback with explanations
+- Wrong answers loop back until mastered
+- Track incorrect attempts per question
+- Perfect for learning new material
+
+**Best for:** Active learning, exam prep, skill building
+
+#### Testing Mode (Results at End)
+- Answer all questions first
+- Navigate freely between questions
+- See results and explanations at the end
+- Traditional quiz experience
+
+**Best for:** Self-testing, progress checks, assessments
+
+### 2. Meteor Drop (Coming Soon) ☄️
+
+Fast-paced action game where questions fall from the sky!
+
+- Type answers before meteors hit the ground
+- Multiple meteors active simultaneously
+- Lives system (3 lives)
+- Score multipliers for streaks
+- Increasing difficulty
+
+**Best for:** Speed, reflexes, kinetic learners
+
+### 3. Flashcards (Coming Soon) 🃏
+
+Classic flashcard experience with modern features:
+
+- Swipe or click to flip
+- Self-assessment (Again, Hard, Good, Easy)
+- Spaced repetition scheduling
+- Shuffle and focus modes
+
+**Best for:** Memorization, spaced repetition, review
+
+### More Games Coming
+- **Type Race**: Speed typing challenge
+- **Memory Match**: Pair matching game
+- **Battle Mode**: Multiplayer learning
+
+---
+
+## Creating Learning Sets
 
 ### Method 1: Use an LLM (Recommended)
 
-1. **Copy the prompt** from the app (click "Copy Prompt" button)
+1. **Copy this prompt** (also available in the app):
 
-2. **Use this template** with ChatGPT, Claude, or any LLM:
-   ```
-   Generate a quiz on [TOPIC] with [NUMBER] multiple choice questions. 
-   Return ONLY valid JSON in this exact format:
-   [
-     {
-       "question": "question text here",
-       "options": ["option A", "option B", "option C", "option D"],
-       "correctAnswer": 0,
-       "reasoning": "explanation of why this answer is correct"
-     }
-   ]
-   where correctAnswer is the index (0-3) of the correct option, and reasoning explains why that answer is correct.
-   ```
+```
+Generate a learning set on [TOPIC] with [NUMBER] items at [DIFFICULTY] difficulty level.
+Return ONLY valid JSON in this exact format:
 
-3. **Example prompt:**
-   ```
-   Generate a quiz on Python programming with 10 multiple choice questions.
-   ```
+{
+  "topic": "[TOPIC]",
+  "difficulty": "[DIFFICULTY]",
+  "items": [
+    {
+      "question": "question text",
+      "answer": "correct answer text",
+      "options": ["correct answer", "wrong 1", "wrong 2", "wrong 3"],
+      "correctIndex": 0,
+      "explanation": "why this answer is correct and others are wrong",
+      "category": "subtopic",
+      "difficulty": "easy|medium|hard"
+    }
+  ]
+}
 
-4. **Paste the JSON** into the app
-
-**Important:**
-- LLM must return ONLY the JSON array
-- Remove any markdown formatting (like \`\`\`json) before pasting
-- Each question needs exactly 4 options
-- correctAnswer must be 0, 1, 2, or 3
-
-### Method 2: Load Example
-
-Click "Load Example" to try a sample quiz about general knowledge.
-
-### Method 3: Write Your Own
-
-Create a JSON file with this format:
-
-```json
-[
-  {
-    "question": "What is the capital of France?",
-    "options": ["London", "Paris", "Berlin", "Madrid"],
-    "correctAnswer": 1,
-    "reasoning": "Paris is the capital and largest city of France, known for landmarks like the Eiffel Tower and the Louvre Museum."
-  },
-  {
-    "question": "Which planet is known as the Red Planet?",
-    "options": ["Venus", "Jupiter", "Mars", "Saturn"],
-    "correctAnswer": 2,
-    "reasoning": "Mars is called the Red Planet because of its reddish appearance, caused by iron oxide (rust) on its surface."
-  }
-]
+Requirements:
+- Set overall difficulty to [DIFFICULTY] and adjust the ratio of question difficulties accordingly:
+  * For "easy" sets: mostly easy questions, some medium questions, NO hard questions
+  * For "medium" sets: balanced mix of easy, medium, and hard questions
+  * For "hard" sets: mostly hard questions, some medium questions, NO easy questions
+- Each item needs a clear question
+- Provide the answer as text (for all game types)
+- Include 4 options for multiple choice games
+- correctIndex (0-3) points to the right answer
+- Explanation should teach the concept
+- Categorize by subtopic
+- Rate individual question difficulty based on complexity
 ```
 
-**Required fields:**
-- `question`: The question text (string)
-- `options`: Array of exactly 4 answer choices (strings)
-- `correctAnswer`: Index of correct option (0-3)
-- `reasoning`: Explanation of why the answer is correct (string)
+2. **Use with ChatGPT, Claude, etc:**
+   ```
+   Generate a learning set on Python Programming with 10 items.
+   ```
+
+3. **Paste the JSON** into the app
+
+### Method 2: Load Saved Topics
+
+The app automatically saves all your learning sets. Access them from the home page!
+
+### Method 3: Use Example
+
+Click "Use Example" on the home page to try the platform with sample content.
+
+---
+
+## Progress Tracking
+
+### Mastery System
+
+The platform tracks your progress with a 6-level mastery system:
+
+- **Level 0 - New**: Never attempted
+- **Level 1 - Learning**: First attempts
+- **Level 2 - Familiar**: 50%+ accuracy
+- **Level 3 - Proficient**: 70%+ accuracy
+- **Level 4 - Advanced**: 80%+ accuracy
+- **Level 5 - Mastered**: 90%+ accuracy with 5+ correct
+
+### Universal Progress
+
+Progress is tracked across ALL games:
+- Total attempts per question
+- Correct vs incorrect ratio
+- Per-game statistics
+- Last attempted date
+- Next review date (spaced repetition)
+- Confidence history
+
+### XP and Levels
+
+Earn XP for correct answers:
+- Base 10 XP per correct answer
+- Bonus XP based on mastery level
+- Game type multipliers
+- Level up every 100 XP
+
+### Statistics Dashboard
+
+View detailed analytics:
+- Overall accuracy rate
+- Mastery breakdown by level
+- Per-question progress
+- Game-specific statistics
+- Time tracking
 
 ---
 
@@ -190,32 +301,34 @@ learninator/
 ├── backend/
 │   ├── main.py              # FastAPI server
 │   ├── requirements.txt     # Python dependencies
-│   ├── environment.yml      # Conda environment spec
-│   └── .gitignore
+│   └── environment.yml      # Conda environment
 ├── frontend/
 │   ├── src/
-│   │   ├── components/
-│   │   │   ├── QuizInput.jsx       # JSON input & mode selection
-│   │   │   ├── QuizQuestion.jsx    # Quiz display with mastery loop
-│   │   │   └── QuizResults.jsx     # Score & detailed results
-│   │   ├── App.jsx                 # Main app logic
-│   │   ├── main.jsx                # React entry point
-│   │   └── index.css               # Global styles
+│   │   ├── pages/
+│   │   │   ├── HomePage.jsx        # Content creation
+│   │   │   ├── GameHub.jsx         # Game selection
+│   │   │   └── StatsPage.jsx       # Analytics
+│   │   ├── games/
+│   │   │   └── quiz/
+│   │   │       ├── QuizGame.jsx    # Quiz wrapper
+│   │   │       ├── QuizQuestion.jsx
+│   │   │       └── QuizResults.jsx
+│   │   ├── services/
+│   │   │   ├── storageService.js   # localStorage manager
+│   │   │   ├── progressService.js  # Progress tracking
+│   │   │   └── questionAdapter.js  # Format conversion
+│   │   ├── App.jsx                 # Router
+│   │   └── main.jsx
 │   ├── package.json
-│   ├── vite.config.js
-│   └── index.html
-├── start.sh                 # Startup script
-├── cleanup.sh              # Dependency cleanup script
-├── example-quiz.json       # Sample quiz
-├── LLM_PROMPT_TEMPLATE.txt # Template for LLMs
-└── README.md               # This file
+│   └── vite.config.js
+├── start.sh
+├── cleanup.sh
+└── README.md
 ```
 
 ---
 
 ## Manual Setup
-
-If the startup script doesn't work, follow these steps:
 
 ### Prerequisites
 
@@ -223,119 +336,40 @@ If the startup script doesn't work, follow these steps:
 - **Conda** (Miniconda or Anaconda)
 - **npm** (comes with Node.js)
 
-Check versions:
-```bash
-node --version   # Should be v18+
-conda --version  # Should be installed
-npm --version    # Should be installed
-```
-
 ### Backend Setup
 
-1. **Create conda environment:**
-   ```bash
-   conda create -n learn python=3.10 -y
-   conda activate learn
-   ```
+```bash
+# Create conda environment
+conda create -n learn python=3.10 -y
+conda activate learn
 
-2. **Install dependencies:**
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   ```
+# Install dependencies
+cd backend
+pip install -r requirements.txt
 
-3. **Start the server:**
-   ```bash
-   uvicorn main:app --reload --port 8000
-   ```
-
-The backend will be available at `http://localhost:8000`
-API docs at `http://localhost:8000/docs`
+# Start server
+uvicorn main:app --reload --port 8000
+```
 
 ### Frontend Setup
 
-1. **Install dependencies:**
-   ```bash
-   cd frontend
-   npm install
-   ```
+```bash
+# Install dependencies
+cd frontend
+npm install
 
-2. **Start the development server:**
-   ```bash
-   npm run dev
-   ```
-
-The frontend will be available at `http://localhost:5173`
-
----
-
-## Usage Guide
-
-### Taking a Quiz
-
-1. **Open the app** at `http://localhost:5173`
-
-2. **Prepare your quiz:**
-   - Click "Load Example" for a sample quiz, OR
-   - Generate quiz JSON using an LLM, OR
-   - Paste your own JSON
-
-3. **Choose a quiz mode:**
-   - **Instant Feedback (Mastery Mode)**: Learn as you go with repeated practice
-   - **Results at End**: Traditional testing experience
-
-4. **Start the quiz** and answer questions
-
-5. **Review your results:**
-   - See your score and accuracy
-   - Read explanations for each question
-   - View incorrect attempts (in Mastery Mode)
-
-### Understanding Your Results
-
-#### Mastery Mode Results
-- **Correct**: Total questions mastered (always = total in mastery mode)
-- **Incorrect Attempts**: Number of wrong answers before achieving mastery
-- **Total Questions**: Number of questions in the quiz
-- **Per-question badges**: Shows attempts needed for each question
-
-Example:
-```
-Score: 5/5 (100%)
-
-[Correct: 5] [Incorrect Attempts: 3] [Total Questions: 5]
-                before mastery
-
-Q1: What is 2+2?
-✓ Correct
-Explanation: Basic addition...
-[2 incorrect attempts before mastery]
+# Start dev server
+npm run dev
 ```
 
-#### Traditional Mode Results
-- **Correct**: Questions answered correctly
-- **Incorrect**: Questions answered incorrectly  
-- **Total**: Total number of questions
-- **Review**: See all questions with correct answers highlighted
+Access the app at `http://localhost:5173`
 
 ---
 
 ## API Documentation
 
-### Backend Endpoints
-
-#### GET /
-Health check endpoint.
-
-**Response:**
-```json
-{
-  "message": "Quiz API is running"
-}
-```
-
-#### POST /api/quiz/validate
-Validates quiz JSON structure before starting.
+### POST /api/quiz/validate
+Validates quiz JSON structure.
 
 **Request:**
 ```json
@@ -356,17 +390,12 @@ Validates quiz JSON structure before starting.
 {
   "valid": true,
   "questionCount": 5,
-  "message": "Quiz validated successfully with 5 questions"
+  "message": "Quiz validated successfully"
 }
 ```
 
-**Validation rules:**
-- Must have exactly 4 options per question
-- correctAnswer must be 0-3
-- All fields are required
-
-#### POST /api/quiz/submit
-Calculates score and returns detailed results.
+### POST /api/quiz/submit
+Calculates quiz results.
 
 **Request:**
 ```json
@@ -382,16 +411,7 @@ Calculates score and returns detailed results.
   "score": 4,
   "total": 5,
   "percentage": 80.0,
-  "results": [
-    {
-      "questionIndex": 0,
-      "question": "...",
-      "userAnswer": 1,
-      "correctAnswer": 1,
-      "isCorrect": true,
-      "reasoning": "..."
-    }
-  ]
+  "results": [...]
 }
 ```
 
@@ -401,80 +421,63 @@ Calculates score and returns detailed results.
 
 ### Backend Issues
 
-**Problem:** Backend won't start
+**Port 8000 already in use:**
 ```bash
-# Check conda is installed
-conda --version
-
-# Create/activate environment
-conda create -n learn python=3.10 -y
-conda activate learn
-
-# Reinstall dependencies
-cd backend
-pip install -r requirements.txt
+lsof -ti:8000 | xargs kill -9
+uvicorn main:app --reload --port 8000
 ```
 
-**Problem:** Port 8000 already in use
+**Conda environment issues:**
 ```bash
-# Kill existing process
-lsof -ti:8000 | xargs kill -9
-
-# Or use a different port
-uvicorn main:app --reload --port 8001
+conda deactivate
+conda remove -n learn --all -y
+conda create -n learn python=3.10 -y
+conda activate learn
+pip install -r backend/requirements.txt
 ```
 
 ### Frontend Issues
 
-**Problem:** Frontend won't start
+**Node.js/npm issues:**
 ```bash
-# Check Node.js version
-node --version  # Should be v18+
-
-# Clean install
 cd frontend
 rm -rf node_modules package-lock.json
 npm install
 ```
 
-**Problem:** Port 5173 already in use
+**WSL npm errors:**
+- Install Node.js NATIVELY in WSL (not Windows version)
+- Check: `which npm` should NOT show `/mnt/c/...`
 ```bash
-# Kill existing process
-lsof -ti:5173 | xargs kill -9
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
 ```
 
-**Problem:** npm errors in WSL
-- Make sure Node.js is installed NATIVELY in WSL
-- Check with: `which npm` (should NOT show `/mnt/c/...`)
-- Install Node.js in WSL:
-  ```bash
-  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-  sudo apt-get install -y nodejs
-  ```
+### Data Issues
 
-### Connection Issues
+**Clear all saved data:**
+```javascript
+// In browser console:
+localStorage.clear()
+location.reload()
+```
 
-**Problem:** Can't connect to backend
-1. Check backend is running: `curl http://localhost:8000`
-2. Check frontend URL matches: Should use `http://localhost:8000`
-3. Check firewall isn't blocking ports 8000 or 5173
+**Export/import data:**
+```javascript
+// Export (in browser console)
+const data = {
+  content: localStorage.getItem('learninator_content'),
+  progress: localStorage.getItem('learninator_progress'),
+  profile: localStorage.getItem('learninator_profile')
+}
+console.log(JSON.stringify(data))
 
-**Problem:** CORS errors
-- Backend already has CORS enabled for all origins
-- Clear browser cache and reload
-
-### Quiz Issues
-
-**Problem:** JSON validation fails
-- Ensure valid JSON format (use a JSON validator)
-- Each question must have exactly 4 options
-- `correctAnswer` must be 0, 1, 2, or 3
-- Remove markdown formatting from LLM output (like \`\`\`json)
-- Ensure all required fields are present
-
-**Problem:** Quiz stuck in mastery mode
-- Refresh the page to reset
-- This happens if there's a bug - report it!
+// Import (paste data then run)
+localStorage.setItem('learninator_content', data.content)
+localStorage.setItem('learninator_progress', data.progress)
+localStorage.setItem('learninator_profile', data.profile)
+location.reload()
+```
 
 ---
 
@@ -484,47 +487,75 @@ lsof -ti:5173 | xargs kill -9
 
 **Frontend:**
 - React 18 with Hooks
+- React Router for navigation
 - Vite for fast development
 - Pure CSS with CSS variables
-- No external UI libraries
+- localStorage for data persistence
 
 **Backend:**
 - FastAPI (Python 3.10)
 - Pydantic for validation
 - Uvicorn ASGI server
-- No database (in-memory only)
+- No database (validation only)
 
-### Development Workflow
+### Adding New Games
 
-1. **Make changes** to code
-2. **Hot reload** happens automatically
-   - Frontend: Vite HMR
-   - Backend: Uvicorn --reload flag
-3. **Check logs** in terminal or `.log` files
-4. **Test** in browser at `http://localhost:5173`
+1. Create game directory: `frontend/src/games/newgame/`
+2. Implement game component
+3. Use `questionAdapter` to convert format
+4. Update progress with `progressService`
+5. Add route in `App.jsx`
+6. Add card to `GameHub.jsx`
 
-### Code Organization
+### Service Layer
 
-**Frontend components:**
-- `QuizInput.jsx`: Handles JSON input, validation, mode selection
-- `QuizQuestion.jsx`: Displays questions, handles mastery loop logic
-- `QuizResults.jsx`: Shows final results with statistics
+**storageService.js**: Manages localStorage
+- `saveContent()` / `getContent()`
+- `saveProgress()` / `getProgress()`
+- `getProfile()` / `saveProfile()`
 
-**Backend routes:**
-- `/api/quiz/validate`: Validates quiz structure
-- `/api/quiz/submit`: Calculates and returns results
+**progressService.js**: Tracks mastery
+- `updateProgress(questionId, isCorrect, gameType)`
+- `getMasteryStats(topicId)`
+- `getQuestionsForReview(topicId)`
 
-### Adding Features
+**questionAdapter.js**: Format conversion
+- `normalizeContent(inputData)`
+- `toQuizFormat(item)`
+- `toMeteorFormat(item)`
+- `toFlashcardFormat(item)`
 
-The codebase is designed to be extended. Some ideas:
-- **Question categories/tags**: Add category field to questions
-- **Difficulty levels**: Tag questions as easy/medium/hard
-- **Hints system**: Add hints array to questions
-- **Confidence ratings**: Ask users how confident they were
-- **Progress persistence**: Save progress to localStorage
-- **Spaced repetition**: Schedule questions for review
+---
 
-See the project roadmap in the original plan for more ideas.
+## Roadmap
+
+### Phase 1: Foundation (Completed)
+- ✅ Universal data format
+- ✅ Storage service (localStorage)
+- ✅ Progress tracking system
+- ✅ Multi-page routing
+- ✅ Game Hub dashboard
+- ✅ Quiz game integration
+
+### Phase 2: New Games (In Progress)
+- 🚧 Meteor Drop game
+- 🚧 Flashcards game
+- ⏳ Type Race game
+- ⏳ Memory Match game
+
+### Phase 3: Advanced Features
+- ⏳ Spaced repetition algorithm
+- ⏳ Achievement system
+- ⏳ Daily goals and streaks
+- ⏳ Advanced analytics
+- ⏳ Export/import functionality
+
+### Phase 4: Platform Features
+- ⏳ Cloud sync (optional)
+- ⏳ Social sharing
+- ⏳ Community content marketplace
+- ⏳ Mobile app (React Native)
+- ⏳ Teacher dashboard
 
 ---
 
@@ -534,30 +565,4 @@ This project is open source and available under the MIT License.
 
 ---
 
-## Contributing
-
-Contributions are welcome! This is a learning project designed to help students master material through active practice.
-
-### Future Enhancements
-
-**High Priority:**
-- LocalStorage persistence for questions and progress
-- Confidence rating system
-- Question categories and filtering
-- Hint system for difficult questions
-
-**Medium Priority:**
-- Spaced repetition algorithm
-- Progress analytics dashboard
-- Different study modes (Learn, Review, Challenge)
-- XP and achievement system
-
-**Low Priority:**
-- Export results as PDF
-- Share quiz sets
-- AI-generated follow-up questions
-- Voice mode for accessibility
-
----
-
-**Built with ❤️ for learners who want to truly master their material, not just memorize it.**
+**Built with learning science in mind. Generate once, learn in many ways!**
