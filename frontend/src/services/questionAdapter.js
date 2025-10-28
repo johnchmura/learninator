@@ -74,8 +74,10 @@ class QuestionAdapter {
       id: item.id,
       question: item.question,
       answer: this.extractAnswer(item),
+      options: item.options || [],
       acceptableAnswers: this.generateAcceptableAnswers(item),
       fallSpeed: this.calculateFallSpeed(item.difficulty),
+      difficulty: item.difficulty || 'medium',
       explanation: item.explanation
     }
   }

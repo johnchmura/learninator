@@ -17,6 +17,15 @@
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .back-btn {
   background: none;
   border: none;
@@ -27,7 +36,6 @@
   padding: 8px 16px;
   border-radius: 8px;
   transition: background 0.2s;
-  margin-bottom: 16px;
 }
 
 .back-btn:hover {
@@ -246,28 +254,24 @@
   color: white;
 }
 
-/* Question Management Section */
-.question-management {
-  margin-bottom: 24px;
-  display: flex;
-  justify-content: flex-end;
-}
-
+/* Add Questions Button */
 .add-questions-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #4caf50;
   color: white;
   border: none;
-  padding: 12px 24px;
+  padding: 10px 20px;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
+  white-space: nowrap;
 }
 
 .add-questions-btn:hover {
+  background: #45a049;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
 /* Add Questions Modal */
@@ -422,6 +426,17 @@
 }
 
 @media (max-width: 768px) {
+  .header-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .back-btn,
+  .add-questions-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
   .add-questions-modal {
     max-height: 95vh;
   }

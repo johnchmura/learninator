@@ -46,6 +46,8 @@ function GameHub() {
   const handleGameSelect = (gameType) => {
     if (gameType === 'quiz') {
       navigate('/game/quiz')
+    } else if (gameType === 'meteor') {
+      navigate('/game/meteor')
     } else if (gameType === 'stats') {
       navigate('/stats')
     } else {
@@ -239,7 +241,7 @@ Generate NEW questions that are different from the ones above.`
       icon: '☄️',
       name: 'Meteor Drop',
       description: 'Fast & action!',
-      available: false
+      available: true
     },
     {
       id: 'flashcards',
@@ -360,9 +362,14 @@ Generate NEW questions that are different from the ones above.`
       
       <div className="hub-container">
         <div className="hub-header">
-          <button className="back-btn" onClick={handleBackToHome}>
-            ← Back to Home
-          </button>
+          <div className="header-top">
+            <button className="back-btn" onClick={handleBackToHome}>
+              ← Back to Home
+            </button>
+            <button className="add-questions-btn" onClick={handleOpenAddModal}>
+              + Add More Questions
+            </button>
+          </div>
           <div className="topic-info">
             <h1>{currentTopic.topic}</h1>
             <p className="topic-details">
@@ -370,12 +377,6 @@ Generate NEW questions that are different from the ones above.`
               {getDifficultyMix() && ` • ${getDifficultyMix()}`}
             </p>
           </div>
-        </div>
-
-        <div className="question-management">
-          <button className="add-questions-btn" onClick={handleOpenAddModal}>
-            + Add More Questions
-          </button>
         </div>
 
         {masteryStats && (
