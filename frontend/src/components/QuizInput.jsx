@@ -5,6 +5,7 @@ function QuizInput({ onQuizStart }) {
   const [jsonInput, setJsonInput] = useState('')
   const [error, setError] = useState('')
   const [isValidating, setIsValidating] = useState(false)
+  const [quizMode, setQuizMode] = useState('end') // 'instant' or 'end'
 
   const examplePrompt = `Generate a quiz on [TOPIC] with [NUMBER] multiple choice questions. 
 Return ONLY valid JSON in this exact format:
@@ -12,10 +13,11 @@ Return ONLY valid JSON in this exact format:
   {
     "question": "question text here",
     "options": ["option A", "option B", "option C", "option D"],
-    "correctAnswer": 0
+    "correctAnswer": 0,
+    "reasoning": "explanation of why this answer is correct"
   }
 ]
-where correctAnswer is the index (0-3) of the correct option.`
+where correctAnswer is the index (0-3) of the correct option, and reasoning explains why that answer is correct.`
 
   const handleValidate = async () => {
     setError('')
@@ -46,7 +48,7 @@ where correctAnswer is the index (0-3) of the correct option.`
       const data = await response.json()
       
       if (data.valid) {
-        onQuizStart(parsed)
+        onQuizStart(parsed, quizMode)
       }
     } catch (err) {
       if (err instanceof SyntaxError) {
@@ -64,17 +66,20 @@ where correctAnswer is the index (0-3) of the correct option.`
       {
         question: "What is the capital of France?",
         options: ["London", "Paris", "Berlin", "Madrid"],
-        correctAnswer: 1
+        correctAnswer: 1,
+        reasoning: "Paris is the capital and largest city of France, known for landmarks like the Eiffel Tower and the Louvre Museum."
       },
       {
         question: "Which planet is known as the Red Planet?",
         options: ["Venus", "Jupiter", "Mars", "Saturn"],
-        correctAnswer: 2
+        correctAnswer: 2,
+        reasoning: "Mars is called the Red Planet because of its reddish appearance, caused by iron oxide (rust) on its surface."
       },
       {
         question: "What is 2 + 2?",
         options: ["3", "4", "5", "6"],
-        correctAnswer: 1
+        correctAnswer: 1,
+        reasoning: "Basic addition: 2 + 2 equals 4. This is a fundamental arithmetic operation."
       }
     ]
     setJsonInput(JSON.stringify(exampleQuiz, null, 2))
@@ -109,6 +114,38 @@ where correctAnswer is the index (0-3) of the correct option.`
         </div>
 
         {error && <div className="error-message">{error}</div>}
+
+        <div className="quiz-mode-selection">
+          <h3>Quiz Mode:</h3>
+          <div className="mode-options">
+            <label className={`mode-option ${quizMode === 'instant' ? 'selected' : ''}`}>
+              <input
+                type="radio"
+                name="quizMode"
+                value="instant"
+                checked={quizMode === 'instant'}
+                onChange={(e) => setQuizMode(e.target.value)}
+              />
+              <div className="mode-info">
+                <strong>Instant Feedback</strong>
+                <p>See if you're right or wrong immediately after each answer with explanations</p>
+              </div>
+            </label>
+            <label className={`mode-option ${quizMode === 'end' ? 'selected' : ''}`}>
+              <input
+                type="radio"
+                name="quizMode"
+                value="end"
+                checked={quizMode === 'end'}
+                onChange={(e) => setQuizMode(e.target.value)}
+              />
+              <div className="mode-info">
+                <strong>Results at End</strong>
+                <p>Complete all questions first, then see your score and explanations</p>
+              </div>
+            </label>
+          </div>
+        </div>
 
         <div className="button-group">
           <button 

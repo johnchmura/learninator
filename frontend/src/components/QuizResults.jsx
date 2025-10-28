@@ -71,6 +71,10 @@ function QuizResults({ results, onRestart }) {
                 </div>
               )}
             </div>
+            <div className="result-reasoning">
+              <p className="reasoning-label">Explanation:</p>
+              <p className="reasoning-text">{result.reasoning}</p>
+            </div>
           </div>
         ))}
       </div>

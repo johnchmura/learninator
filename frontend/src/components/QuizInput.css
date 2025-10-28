@@ -99,6 +99,70 @@
   font-size: 14px;
 }
 
+.quiz-mode-selection {
+  margin-bottom: 24px;
+}
+
+.quiz-mode-selection h3 {
+  font-size: 18px;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.mode-options {
+  display: flex;
+  gap: 12px;
+  flex-direction: column;
+}
+
+.mode-option {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: white;
+}
+
+.mode-option:hover {
+  border-color: var(--primary-color);
+  background-color: #f9fafb;
+}
+
+.mode-option.selected {
+  border-color: var(--primary-color);
+  background-color: #eef2ff;
+}
+
+.mode-option input[type="radio"] {
+  margin-right: 12px;
+  margin-top: 2px;
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.mode-info {
+  flex: 1;
+}
+
+.mode-info strong {
+  display: block;
+  font-size: 16px;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.mode-info p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
 .button-group {
   display: flex;
   gap: 12px;

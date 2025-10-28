@@ -18,6 +18,7 @@ class QuizQuestion(BaseModel):
     question: str
     options: List[str]
     correctAnswer: int
+    reasoning: str
     
     @field_validator('options')
     @classmethod
@@ -78,7 +79,8 @@ def submit_quiz(submission: SubmitAnswers):
             "question": question.question,
             "userAnswer": answer,
             "correctAnswer": question.correctAnswer,
-            "isCorrect": is_correct
+            "isCorrect": is_correct,
+            "reasoning": question.reasoning
         })
     
     total_questions = len(submission.questions)

@@ -10,11 +10,13 @@ function App() {
   const [userAnswers, setUserAnswers] = useState([])
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [results, setResults] = useState(null)
+  const [quizMode, setQuizMode] = useState('end') // 'instant' or 'end'
 
-  const handleQuizStart = (questions) => {
+  const handleQuizStart = (questions, mode) => {
     setQuizData(questions)
     setUserAnswers(new Array(questions.length).fill(-1))
     setCurrentQuestion(0)
+    setQuizMode(mode)
     setCurrentView('quiz')
   }
 
@@ -55,6 +57,7 @@ function App() {
     setUserAnswers([])
     setCurrentQuestion(0)
     setResults(null)
+    setQuizMode('end')
   }
 
   return (
@@ -73,6 +76,7 @@ function App() {
             questions={quizData}
             currentQuestion={currentQuestion}
             userAnswers={userAnswers}
+            quizMode={quizMode}
             onAnswerSelect={handleAnswerSelect}
             onNext={() => setCurrentQuestion(prev => prev + 1)}
             onPrevious={() => setCurrentQuestion(prev => prev - 1)}
@@ -81,7 +85,7 @@ function App() {
         )}
         
         {currentView === 'results' && results && (
-          <QuizResults results={results} onRestart={handleRestart} />
+          <QuizResults results={results} quizMode={quizMode} onRestart={handleRestart} />
         )}
       </main>
     </div>

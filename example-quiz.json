@@ -2,27 +2,32 @@
   {
     "question": "What is the capital of France?",
     "options": ["London", "Paris", "Berlin", "Madrid"],
-    "correctAnswer": 1
+    "correctAnswer": 1,
+    "reasoning": "Paris is the capital and largest city of France, known for landmarks like the Eiffel Tower and the Louvre Museum."
   },
   {
     "question": "Which planet is known as the Red Planet?",
     "options": ["Venus", "Jupiter", "Mars", "Saturn"],
-    "correctAnswer": 2
+    "correctAnswer": 2,
+    "reasoning": "Mars is called the Red Planet because of its reddish appearance, caused by iron oxide (rust) on its surface."
   },
   {
     "question": "What is 2 + 2?",
     "options": ["3", "4", "5", "6"],
-    "correctAnswer": 1
+    "correctAnswer": 1,
+    "reasoning": "Basic addition: 2 + 2 equals 4. This is a fundamental arithmetic operation."
   },
   {
     "question": "Who painted the Mona Lisa?",
     "options": ["Vincent van Gogh", "Pablo Picasso", "Leonardo da Vinci", "Michelangelo"],
-    "correctAnswer": 2
+    "correctAnswer": 2,
+    "reasoning": "Leonardo da Vinci painted the Mona Lisa during the Renaissance period (1503-1519). It is now displayed in the Louvre Museum in Paris."
   },
   {
     "question": "What is the largest ocean on Earth?",
     "options": ["Atlantic Ocean", "Indian Ocean", "Arctic Ocean", "Pacific Ocean"],
-    "correctAnswer": 3
+    "correctAnswer": 3,
+    "reasoning": "The Pacific Ocean is the largest and deepest ocean, covering more than 63 million square miles and containing more than half of Earth's free water."
   }
 ]
 

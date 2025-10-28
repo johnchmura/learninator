@@ -4,10 +4,11 @@ Return ONLY valid JSON in this exact format:
   {
     "question": "question text here",
     "options": ["option A", "option B", "option C", "option D"],
-    "correctAnswer": 0
+    "correctAnswer": 0,
+    "reasoning": "explanation of why this answer is correct"
   }
 ]
-where correctAnswer is the index (0-3) of the correct option.
+where correctAnswer is the index (0-3) of the correct option, and reasoning explains why that answer is correct.
 
 
 === EXAMPLE USAGE ===
