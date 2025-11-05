@@ -254,6 +254,30 @@
   color: white;
 }
 
+/* Modal Close Button */
+.close-modal-btn {
+  background: none;
+  border: none;
+  font-size: 36px;
+  color: #999;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+  padding: 0;
+  line-height: 0;
+  font-family: Arial, sans-serif;
+}
+
+.close-modal-btn:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
 /* Add Questions Button */
 .add-questions-btn {
   background: #4caf50;

@@ -10,6 +10,7 @@ function StatsPage() {
   const [masteryStats, setMasteryStats] = useState(null)
   const [questionProgress, setQuestionProgress] = useState([])
   const [profile, setProfile] = useState(null)
+  const [showConfirmClear, setShowConfirmClear] = useState(false)
 
   useEffect(() => {
     const topicId = storageService.getCurrentTopic()
@@ -43,6 +44,20 @@ function StatsPage() {
     navigate('/hub')
   }
 
+  const handleClearAllData = () => {
+    setShowConfirmClear(true)
+  }
+
+  const handleConfirmClear = () => {
+    storageService.clearAllData()
+    setShowConfirmClear(false)
+    navigate('/')
+  }
+
+  const handleCancelClear = () => {
+    setShowConfirmClear(false)
+  }
+
   const getMasteryLevelName = (level) => {
     const names = ['New', 'Learning', 'Familiar', 'Proficient', 'Advanced', 'Mastered']
     return names[level] || 'Unknown'
@@ -59,6 +74,32 @@ function StatsPage() {
 
   return (
     <div className="stats-page">
+      {showConfirmClear && (
+        <div className="confirm-overlay" onMouseDown={(e) => e.target === e.currentTarget && handleCancelClear()}>
+          <div className="confirm-dialog">
+            <h3>Confirm Clear All Data</h3>
+            <p>
+              Are you sure you want to delete ALL your data? This will permanently remove:
+            </p>
+            <ul className="confirm-dialog-list">
+              <li>All learning sets</li>
+              <li>All progress and statistics</li>
+              <li>Your profile and XP</li>
+            </ul>
+            <p>
+              This action cannot be undone!
+            </p>
+            <div className="confirm-actions">
+              <button className="confirm-cancel-btn" onClick={handleCancelClear}>
+                Cancel
+              </button>
+              <button className="confirm-delete-btn" onClick={handleConfirmClear}>
+                Clear All Data
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="stats-container">
         <div className="stats-header">
           <button className="back-btn" onClick={handleBackToHub}>
@@ -167,6 +208,16 @@ function StatsPage() {
             </div>
           </div>
         )}
+
+        <div className="data-management-section">
+          <h2>Data Management</h2>
+          <div className="data-management-content">
+            <p>Clear all your local data including learning sets, progress, and statistics.</p>
+            <button className="clear-all-data-btn" onClick={handleClearAllData}>
+              Clear All Data
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )

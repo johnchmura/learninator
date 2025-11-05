@@ -196,21 +196,59 @@
   border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
-  white-space: nowrap;
+  white-space: normal;
+  max-width: 350px;
   min-width: 200px;
   text-align: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.4;
+}
+
+.meteor.exploding {
+  animation: meteorExplosion 0.4s ease-out forwards;
+  pointer-events: none;
+}
+
+.meteor.exploding .meteor-body {
+  animation: none;
+}
+
+.meteor.exploding .meteor-trail,
+.meteor.exploding .meteor-question {
+  opacity: 0;
+  transition: opacity 0.1s ease-out;
+}
+
+@keyframes meteorExplosion {
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateX(-50%) scale(1.8);
+    filter: brightness(2) drop-shadow(0 0 20px #FFD700);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scale(2.5);
+    filter: brightness(3) drop-shadow(0 0 30px #FF4444);
+  }
 }
 
 /* Answer Buttons */
 .answer-buttons-grid {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  bottom: 10%;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px;
   z-index: 8;
 }
 
@@ -218,9 +256,10 @@
   background: white;
   border: 3px solid #667eea;
   border-radius: 16px;
-  padding: 24px;
-  min-width: 250px;
-  min-height: 120px;
+  padding: 20px;
+  flex: 1;
+  max-width: 280px;
+  min-height: 100px;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
@@ -247,12 +286,53 @@
   opacity: 0.6;
 }
 
+.answer-button.disabled-option {
+  opacity: 0.3 !important;
+  filter: grayscale(0.8);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.answer-button.disabled-option .answer-letter,
+.answer-button.disabled-option .answer-text {
+  opacity: 0.5;
+}
+
+.answer-button.exploding {
+  animation: buttonExplosion 0.6s ease-out forwards;
+  pointer-events: none;
+  z-index: 10;
+  transition: none !important;
+}
+
+.answer-button.exploding.disabled-option {
+  animation: buttonExplosion 0.6s ease-out forwards;
+}
+
 .answer-button.correct-flash {
   animation: flashGreen 0.6s ease-out;
 }
 
 .answer-button.wrong-flash {
   animation: flashRed 0.6s ease-out;
+}
+
+@keyframes buttonExplosion {
+  0% {
+    background: white;
+    border-color: #667eea;
+    color: #333;
+  }
+  50% {
+    background: #ff5252;
+    border-color: #ff5252;
+    color: white;
+  }
+  100% {
+    background: white;
+    border-color: #667eea;
+    color: #333;
+  }
 }
 
 @keyframes flashGreen {
@@ -289,24 +369,34 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: 15%;
+  top: 72%;
   background: linear-gradient(180deg, transparent, #8B4513);
   border-top: 3px solid #FF4444;
   box-shadow: 0 -10px 30px rgba(255, 68, 68, 0.5);
   z-index: 1;
 }
 
-.meteor-ground::before {
-  content: '🔥 IMPACT ZONE 🔥';
+.meteor-ground.show-warning::before {
+  content: "Don't let the meteors get below this line!";
   position: absolute;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: -45px;
+  right: 30px;
   color: #FF4444;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 800;
   text-shadow: 0 0 10px #FF4444;
   animation: pulse 1s infinite;
+  white-space: nowrap;
+  opacity: 1;
+  transition: opacity 0.5s ease-out;
+  z-index: 2;
+}
+
+.meteor-ground.hide-warning::before {
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease-out;
 }
 
 /* Pause Overlay */
@@ -518,14 +608,16 @@
   }
   
   .answer-buttons-grid {
-    gap: 12px;
-    width: 90%;
+    gap: 8px;
+    padding: 0 10px;
+    bottom: 10%;
   }
   
   .answer-button {
     min-width: 0;
-    min-height: 100px;
-    padding: 16px;
+    min-height: 80px;
+    padding: 12px;
+    max-width: none;
   }
   
   .answer-letter {

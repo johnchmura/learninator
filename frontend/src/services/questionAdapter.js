@@ -194,6 +194,7 @@ class QuestionAdapter {
         errors.push(`Item ${index + 1}: Missing question text`)
       }
 
+      // Multiple choice questions need options and correctIndex
       if (!item.answer && (!item.options || item.options.length === 0)) {
         errors.push(`Item ${index + 1}: Missing answer or options`)
       }

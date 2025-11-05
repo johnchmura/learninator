@@ -16,6 +16,7 @@ function GameHub() {
   const [topic, setTopic] = useState('')
   const [numQuestions, setNumQuestions] = useState('')
   const [difficulty, setDifficulty] = useState('')
+  const [questionType, setQuestionType] = useState('mix')
   const [jsonInput, setJsonInput] = useState('')
   const [showCopied, setShowCopied] = useState(false)
   const [error, setError] = useState('')
@@ -87,6 +88,7 @@ Return ONLY valid JSON in this exact format:
   "difficulty": "[DIFFICULTY]",
   "items": [
     {
+      "type": "multiple-choice",
       "question": "question text",
       "answer": "correct answer text",
       "options": ["correct answer", "wrong 1", "wrong 2", "wrong 3"],
@@ -103,10 +105,10 @@ Requirements:
   * For "easy" sets: mostly easy questions, some medium questions, NO hard questions
   * For "medium" sets: balanced mix of easy, medium, and hard questions
   * For "hard" sets: mostly hard questions, some medium questions, NO easy questions
+- Generate multiple-choice questions with "type": "multiple-choice"
+- Each item needs 4 options with correctIndex (0-3) pointing to the right answer
 - Each item needs a clear question
-- Provide the answer as text (for all game types)
-- Include 4 options for multiple choice games
-- correctIndex (0-3) points to the right answer
+- Provide the answer as text
 - Explanation should teach the concept
 - Categorize by subtopic
 - Rate individual question difficulty based on complexity
@@ -218,10 +220,15 @@ Generate NEW questions that are different from the ones above.`
     const diffArray = Array.from(difficulties).sort()
     
     if (diffArray.length === 0) return null
-    if (diffArray.length === 1) return diffArray[0]
     
-    // Multiple difficulties - show them joined
-    return diffArray.join(' and ')
+    // Capitalize first letter of each difficulty
+    const capitalized = diffArray.map(d => d.charAt(0).toUpperCase() + d.slice(1))
+    
+    if (capitalized.length === 1) return capitalized[0]
+    if (capitalized.length === 2) return `${capitalized[0]} and ${capitalized[1]}`
+    
+    // Three or more: use commas and "and" before the last item
+    return `${capitalized.slice(0, -1).join(', ')}, and ${capitalized[capitalized.length - 1]}`
   }
 
   if (!currentTopic) {
@@ -276,8 +283,8 @@ Generate NEW questions that are different from the ones above.`
   return (
     <div className="game-hub">
       {showAddModal && (
-        <div className="modal-overlay" onClick={handleCloseAddModal}>
-          <div className="modal-content add-questions-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onMouseDown={(e) => e.target === e.currentTarget && handleCloseAddModal()}>
+          <div className="modal-content add-questions-modal">
             <div className="modal-header">
               <h2>Add or Replace Questions</h2>
               <button className="close-modal-btn" onClick={handleCloseAddModal}>×</button>
@@ -307,6 +314,14 @@ Generate NEW questions that are different from the ones above.`
                   <option value="easy">Easy</option>
                   <option value="medium">Medium</option>
                   <option value="hard">Hard</option>
+                </select>
+                <select
+                  value={questionType}
+                  onChange={(e) => setQuestionType(e.target.value)}
+                  className="modal-select"
+                >
+                  <option value="mix">Mix (Default)</option>
+                  <option value="multiple-choice">Multiple Choice</option>
                 </select>
               </div>
 

@@ -2,26 +2,21 @@ import { useEffect, useMemo } from 'react'
 import { getMeteorStyle } from './gameLogic'
 import './MeteorGame.css'
 
-function Meteor({ question, difficulty, position, onHitGround }) {
+function Meteor({ question, difficulty, position, onHitGround, destroyed }) {
   const style = getMeteorStyle(difficulty)
   
   // Generate random X position only once per meteor
   const xPosition = useMemo(() => Math.random() * 60 + 20, [])
   
   useEffect(() => {
-    if (position >= 85) { // Ground position
+    if (position >= 85 && !destroyed) { // Ground position
       onHitGround()
     }
-  }, [position, onHitGround])
-  
-  // Truncate long questions
-  const displayQuestion = question.length > 60 
-    ? question.substring(0, 60) + '...' 
-    : question
+  }, [position, onHitGround, destroyed])
   
   return (
     <div 
-      className="meteor" 
+      className={`meteor ${destroyed ? 'exploding' : ''}`}
       style={{
         top: `${position}%`,
         left: `${xPosition}%`,
@@ -41,7 +36,7 @@ function Meteor({ question, difficulty, position, onHitGround }) {
       </div>
       <div className="meteor-trail" style={{ background: style.color }}></div>
       <div className="meteor-question" title={question}>
-        {displayQuestion}
+        {question}
       </div>
     </div>
   )

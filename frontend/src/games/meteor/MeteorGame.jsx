@@ -33,10 +33,17 @@ function MeteorGame() {
   const [showFeedback, setShowFeedback] = useState(false)
   const [lastAnswerIndex, setLastAnswerIndex] = useState(null)
   const [meteorKey, setMeteorKey] = useState(0)
+  const [showWarning, setShowWarning] = useState(true)
+  const [meteorDestroyed, setMeteorDestroyed] = useState(false)
+  const [disabledOptions, setDisabledOptions] = useState([])
+  const [explodingOption, setExplodingOption] = useState(null)
+  const [lifeRemovedForCurrentMeteor, setLifeRemovedForCurrentMeteor] = useState(false)
   
   const animationFrameRef = useRef(null)
   const fallSpeedRef = useRef(FALL_SPEEDS.medium)
   const lastTimeRef = useRef(Date.now())
+  const warningHiddenRef = useRef(false)
+  const meteorDestroyedRef = useRef(false)
   
   // Load questions
   useEffect(() => {
@@ -61,13 +68,25 @@ function MeteorGame() {
     setCurrentQuestion(shuffled[0])
   }, [navigate])
   
+  // Update ref when meteorDestroyed changes
+  useEffect(() => {
+    meteorDestroyedRef.current = meteorDestroyed
+  }, [meteorDestroyed])
+
   // Game loop - meteor falling
   useEffect(() => {
-    if (gameState !== 'playing' || !currentQuestion) return
+    if (gameState !== 'playing' || !currentQuestion || meteorDestroyed) return
     
     lastTimeRef.current = Date.now()
     
     const animate = () => {
+      if (meteorDestroyedRef.current) {
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current)
+        }
+        return
+      }
+      
       const currentTime = Date.now()
       const deltaTime = (currentTime - lastTimeRef.current) / 1000 // Convert to seconds
       lastTimeRef.current = currentTime
@@ -87,7 +106,7 @@ function MeteorGame() {
         cancelAnimationFrame(animationFrameRef.current)
       }
     }
-  }, [gameState, currentQuestion])
+  }, [gameState, currentQuestion, meteorDestroyed])
   
   const spawnNextMeteor = useCallback(() => {
     if (questionQueue.length <= 1) {
@@ -110,10 +129,21 @@ function MeteorGame() {
     setDisabled(false)
     setShowFeedback(false)
     setLastAnswerIndex(null)
+    setMeteorDestroyed(false)
+    setDisabledOptions([])
+    setExplodingOption(null)
+    setLifeRemovedForCurrentMeteor(false)
+    meteorDestroyedRef.current = false
   }, [questionQueue])
   
   const handleMeteorHitGround = useCallback(() => {
-    if (disabled) return // Already handled
+    if (disabled || lifeRemovedForCurrentMeteor) return // Already handled or life already removed
+    
+    // Hide warning on first meteor hit
+    if (!warningHiddenRef.current) {
+      setShowWarning(false)
+      warningHiddenRef.current = true
+    }
     
     setDisabled(true)
     setLives(prev => {
@@ -140,10 +170,16 @@ function MeteorGame() {
         spawnNextMeteor()
       }
     }, 1500)
-  }, [disabled, lives, currentQuestion, spawnNextMeteor])
+  }, [disabled, lives, currentQuestion, spawnNextMeteor, lifeRemovedForCurrentMeteor])
   
   const handleAnswer = useCallback((answerIndex) => {
     if (disabled) return
+    
+    // Hide warning on first meteor answer
+    if (!warningHiddenRef.current) {
+      setShowWarning(false)
+      warningHiddenRef.current = true
+    }
     
     setDisabled(true)
     setLastAnswerIndex(answerIndex)
@@ -156,6 +192,15 @@ function MeteorGame() {
     setQuestionsAnswered(prev => prev + 1)
     
     if (isCorrect) {
+      // Immediately destroy the meteor
+      setMeteorDestroyed(true)
+      meteorDestroyedRef.current = true
+      
+      // Stop animation
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+      
       // Correct answer
       const points = calculateScore(
         currentQuestion.difficulty || 'medium',
@@ -187,13 +232,26 @@ function MeteorGame() {
         progressService.updateProgress(questionItem.id, true, 'meteor')
       }
       
+      // Spawn next meteor after explosion animation
       setTimeout(() => {
         spawnNextMeteor()
-      }, 1000)
+      }, 400)
     } else {
-      // Wrong answer - meteor falls faster
+      // Wrong answer - remove life immediately and swap question
       setStreak(0)
       fallSpeedRef.current = fallSpeedRef.current * 2
+      
+      setExplodingOption(answerIndex)
+      
+      // Remove life immediately
+      setLifeRemovedForCurrentMeteor(true)
+      setLives(prev => {
+        const newLives = prev - 1
+        if (newLives <= 0) {
+          setGameState('gameover')
+        }
+        return newLives
+      })
       
       // Update progress as incorrect
       const topicId = storageService.getCurrentTopic()
@@ -205,11 +263,37 @@ function MeteorGame() {
         progressService.updateProgress(questionItem.id, false, 'meteor')
       }
       
+      // After flash animation, swap question on same meteor
       setTimeout(() => {
+        setExplodingOption(null)
+        
+        // Swap question (similar to spawnNextMeteor but keep meteor position)
+        let nextQuestion
+        if (questionQueue.length <= 1) {
+          // Reshuffle and continue
+          const topicId = storageService.getCurrentTopic()
+          const content = storageService.getContent(topicId)
+          const meteorQuestions = content.items.map(item => 
+            questionAdapter.toMeteorFormat(item)
+          )
+          const shuffled = [...meteorQuestions].sort(() => Math.random() - 0.5)
+          setQuestionQueue(shuffled)
+          nextQuestion = shuffled[0]
+          setCurrentQuestion(nextQuestion)
+        } else {
+          nextQuestion = questionQueue[1]
+          setCurrentQuestion(nextQuestion)
+          setQuestionQueue(prev => prev.slice(1))
+        }
+        
+        // Reset states to allow answering new question
         setDisabled(false)
         setShowFeedback(false)
-        fallSpeedRef.current = FALL_SPEEDS[currentQuestion.difficulty || 'medium']
-      }, 800)
+        setLastAnswerIndex(null)
+        setDisabledOptions([])
+        setExplodingOption(null)
+        fallSpeedRef.current = FALL_SPEEDS[nextQuestion.difficulty || 'medium']
+      }, 600)
     }
   }, [disabled, currentQuestion, meteorPosition, streak, spawnNextMeteor])
   
@@ -229,6 +313,13 @@ function MeteorGame() {
     setMeteorKey(prev => prev + 1)
     setDisabled(false)
     setShowFeedback(false)
+    setShowWarning(true)
+    setMeteorDestroyed(false)
+    setDisabledOptions([])
+    setExplodingOption(null)
+    setLifeRemovedForCurrentMeteor(false)
+    meteorDestroyedRef.current = false
+    warningHiddenRef.current = false
     
     // Reload questions
     const topicId = storageService.getCurrentTopic()
@@ -296,6 +387,7 @@ function MeteorGame() {
               difficulty={currentQuestion.difficulty || 'medium'}
               position={meteorPosition}
               onHitGround={handleMeteorHitGround}
+              destroyed={meteorDestroyed}
             />
             
             <AnswerButtons 
@@ -304,6 +396,8 @@ function MeteorGame() {
               disabled={disabled}
               correctIndex={correctIndex}
               showFeedback={showFeedback}
+              disabledOptions={disabledOptions}
+              explodingOption={explodingOption}
             />
           </>
         )}
@@ -326,7 +420,7 @@ function MeteorGame() {
           </div>
         )}
         
-        <div className="meteor-ground"></div>
+        <div className={`meteor-ground ${showWarning ? 'show-warning' : 'hide-warning'}`}></div>
       </div>
       
       {gameState === 'gameover' && (

@@ -17,7 +17,8 @@ function HomePage() {
   const [savedTopics, setSavedTopics] = useState([])
   const [confirmDelete, setConfirmDelete] = useState(null) // { type: 'single'|'all', topicId?: string }
 
-  const llmPrompt = `Generate a learning set on [TOPIC] with [NUMBER] items at [DIFFICULTY] difficulty level.
+  const generateLLMPrompt = () => {
+    let prompt = `Generate a learning set on [TOPIC] with [NUMBER] items at [DIFFICULTY] difficulty level.
 Return ONLY valid JSON in this exact format:
 
 {
@@ -25,6 +26,7 @@ Return ONLY valid JSON in this exact format:
   "difficulty": "[DIFFICULTY]",
   "items": [
     {
+      "type": "multiple-choice",
       "question": "question text",
       "answer": "correct answer text",
       "options": ["correct answer", "wrong 1", "wrong 2", "wrong 3"],
@@ -41,16 +43,19 @@ Requirements:
   * For "easy" sets: mostly easy questions, some medium questions, NO hard questions
   * For "medium" sets: balanced mix of easy, medium, and hard questions
   * For "hard" sets: mostly hard questions, some medium questions, NO easy questions
+- Generate multiple-choice questions with "type": "multiple-choice"
+- Each item needs 4 options with correctIndex (0-3) pointing to the right answer
 - Each item needs a clear question
-- Provide the answer as text (for all game types)
-- Include 4 options for multiple choice games
-- correctIndex (0-3) points to the right answer
+- Provide the answer as text
 - Explanation should teach the concept
 - Categorize by subtopic
 - Rate individual question difficulty based on complexity`
 
+    return prompt
+  }
+
   const handleCopyPrompt = () => {
-    let promptToCopy = llmPrompt
+    let promptToCopy = generateLLMPrompt()
     
     // Substitute topic, number, and difficulty if provided
     if (topic.trim()) {
@@ -199,8 +204,8 @@ Requirements:
   return (
     <div className="home-page">
       {confirmDelete && (
-        <div className="confirm-overlay" onClick={handleCancelDelete}>
-          <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="confirm-overlay" onMouseDown={(e) => e.target === e.currentTarget && handleCancelDelete()}>
+          <div className="confirm-dialog">
             <h3>Confirm Deletion</h3>
             <p>
               {confirmDelete.type === 'single' 
@@ -219,8 +224,8 @@ Requirements:
         </div>
       )}
       {showSavedTopics && (
-        <div className="modal-overlay" onClick={handleCloseModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onMouseDown={(e) => e.target === e.currentTarget && handleCloseModal()}>
+          <div className="modal-content">
             <div className="modal-header">
               <h2>Your Saved Learning Sets</h2>
               <button className="close-modal-btn" onClick={handleCloseModal}>×</button>
@@ -287,7 +292,7 @@ Requirements:
           
           <div className="prompt-box">
             <h3>LLM Prompt Template:</h3>
-            <pre className="prompt-template">{llmPrompt}</pre>
+            <pre className="prompt-template">{generateLLMPrompt()}</pre>
             <div className="prompt-controls">
               <div className="prompt-inputs">
                 <input
@@ -329,7 +334,7 @@ Requirements:
           </div>
 
           <div className="json-input-area">
-            <label htmlFor="json-textarea">Paste Learning Set JSON:</label>
+            <label htmlFor="json-textarea">Paste response from the LLM:</label>
             <textarea
               id="json-textarea"
               value={jsonInput}

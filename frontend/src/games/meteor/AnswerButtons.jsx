@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import './MeteorGame.css'
 
-function AnswerButtons({ options, onAnswer, disabled, correctIndex, showFeedback }) {
+function AnswerButtons({ options, onAnswer, disabled, correctIndex, showFeedback, disabledOptions = [], explodingOption = null }) {
   const [pressedKey, setPressedKey] = useState(null)
   
   useEffect(() => {
@@ -16,7 +16,7 @@ function AnswerButtons({ options, onAnswer, disabled, correctIndex, showFeedback
       else if (key === 'C' || key === '3') index = 2
       else if (key === 'D' || key === '4') index = 3
       
-      if (index !== -1) {
+      if (index !== -1 && !disabledOptions.includes(index)) {
         setPressedKey(index)
         onAnswer(index)
         setTimeout(() => setPressedKey(null), 300)
@@ -25,18 +25,26 @@ function AnswerButtons({ options, onAnswer, disabled, correctIndex, showFeedback
     
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [onAnswer, disabled])
+  }, [onAnswer, disabled, disabledOptions])
   
   const getButtonClass = (index) => {
     let className = 'answer-button'
     
-    if (disabled) className += ' disabled'
-    if (pressedKey === index) className += ' pressed'
+    const isDisabledOption = disabledOptions.includes(index)
     
-    if (showFeedback) {
+    if (disabled || isDisabledOption) className += ' disabled'
+    if (pressedKey === index && !isDisabledOption) className += ' pressed'
+    
+    if (isDisabledOption) {
+      className += ' disabled-option'
+    }
+    
+    if (explodingOption === index) {
+      className += ' exploding'
+    } else if (showFeedback && explodingOption === null) {
       if (index === correctIndex) {
         className += ' correct-flash'
-      } else if (pressedKey === index) {
+      } else if (pressedKey === index && !isDisabledOption) {
         className += ' wrong-flash'
       }
     }
@@ -48,17 +56,20 @@ function AnswerButtons({ options, onAnswer, disabled, correctIndex, showFeedback
   
   return (
     <div className="answer-buttons-grid">
-      {options.map((option, index) => (
-        <button
-          key={index}
-          className={getButtonClass(index)}
-          onClick={() => !disabled && onAnswer(index)}
-          disabled={disabled}
-        >
-          <span className="answer-letter">{letters[index]}</span>
-          <span className="answer-text">{option}</span>
-        </button>
-      ))}
+      {options.map((option, index) => {
+        const isDisabledOption = disabledOptions.includes(index)
+        return (
+          <button
+            key={index}
+            className={getButtonClass(index)}
+            onClick={() => !disabled && !isDisabledOption && onAnswer(index)}
+            disabled={disabled || isDisabledOption}
+          >
+            <span className="answer-letter">{letters[index]}</span>
+            <span className="answer-text">{option}</span>
+          </button>
+        )
+      })}
     </div>
   )
 }

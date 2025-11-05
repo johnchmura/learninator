@@ -436,7 +436,8 @@
   border-radius: 50%;
   transition: all 0.2s;
   padding: 0;
-  line-height: 1;
+  line-height: 0;
+  font-family: Arial, sans-serif;
 }
 
 .close-modal-btn:hover {
