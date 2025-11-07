@@ -11,10 +11,23 @@ import {
   FALL_SPEEDS, 
   GAME_CONFIG, 
   calculateScore, 
-  getStreakMultiplier,
   shouldEarnBonusLife 
 } from './gameLogic'
 import './MeteorGame.css'
+
+const shuffleQuestions = (questions) => {
+  const copy = [...questions]
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy
+}
+
+const buildQuestionInstance = (question, seed = Date.now()) => ({
+  ...question,
+  instanceId: `${question.id || 'question'}-${seed}-${Math.random().toString(36).slice(2, 8)}`
+})
 
 function MeteorGame() {
   const navigate = useNavigate()
@@ -26,24 +39,54 @@ function MeteorGame() {
   const [questionsAnswered, setQuestionsAnswered] = useState(0)
   const [correctAnswers, setCorrectAnswers] = useState(0)
   
-  const [currentQuestion, setCurrentQuestion] = useState(null)
-  const [meteorPosition, setMeteorPosition] = useState(GAME_CONFIG.METEOR_START_Y)
-  const [questionQueue, setQuestionQueue] = useState([])
+  const [meteors, setMeteors] = useState([]) // Array of { id, question, position, destroyed, isActive }
+  const [questionsPool, setQuestionsPool] = useState([])
   const [disabled, setDisabled] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
   const [lastAnswerIndex, setLastAnswerIndex] = useState(null)
-  const [meteorKey, setMeteorKey] = useState(0)
   const [showWarning, setShowWarning] = useState(true)
-  const [meteorDestroyed, setMeteorDestroyed] = useState(false)
   const [disabledOptions, setDisabledOptions] = useState([])
   const [explodingOption, setExplodingOption] = useState(null)
-  const [lifeRemovedForCurrentMeteor, setLifeRemovedForCurrentMeteor] = useState(false)
+  const [lastOptions, setLastOptions] = useState([])
+  const [lastCorrectIndex, setLastCorrectIndex] = useState(-1)
+  const [feedbackMeteorId, setFeedbackMeteorId] = useState(null)
   
   const animationFrameRef = useRef(null)
-  const fallSpeedRef = useRef(FALL_SPEEDS.medium)
   const lastTimeRef = useRef(Date.now())
   const warningHiddenRef = useRef(false)
-  const meteorDestroyedRef = useRef(false)
+  const meteorIdCounterRef = useRef(0)
+  const spawnTimerRef = useRef(null)
+  const lifeRemovedForMeteorRef = useRef(new Set()) // Track which meteors already had life removed
+  const isProcessingAnswerRef = useRef(false) // Prevent multiple simultaneous answer processing
+  const meteorsRef = useRef([]) // Track current meteors array for reading without setState
+  const gameStateRef = useRef(gameState) // Track current game state to avoid stale closures
+  const baseQuestionsRef = useRef([])
+  const questionBufferRef = useRef([])
+  const spawnLockRef = useRef(false)
+
+  const refillQuestionBuffer = useCallback(() => {
+    const baseQuestions = baseQuestionsRef.current
+    if (!baseQuestions || baseQuestions.length === 0) {
+      return
+    }
+
+    const shuffled = shuffleQuestions(baseQuestions)
+    shuffled.forEach(question => {
+      questionBufferRef.current.push(buildQuestionInstance(question))
+    })
+  }, [])
+
+  const getNextQuestion = useCallback(() => {
+    if (questionBufferRef.current.length === 0) {
+      refillQuestionBuffer()
+    }
+
+    if (questionBufferRef.current.length === 0) {
+      return null
+    }
+
+    return questionBufferRef.current.shift()
+  }, [refillQuestionBuffer])
   
   // Load questions
   useEffect(() => {
@@ -63,39 +106,106 @@ function MeteorGame() {
     const meteorQuestions = content.items.map(item => 
       questionAdapter.toMeteorFormat(item)
     )
-    const shuffled = [...meteorQuestions].sort(() => Math.random() - 0.5)
-    setQuestionQueue(shuffled)
-    setCurrentQuestion(shuffled[0])
-  }, [navigate])
+    baseQuestionsRef.current = meteorQuestions
+    questionBufferRef.current = []
+    refillQuestionBuffer()
+    setQuestionsPool(meteorQuestions)
+    spawnLockRef.current = false
+  }, [navigate, refillQuestionBuffer])
   
-  // Update ref when meteorDestroyed changes
-  useEffect(() => {
-    meteorDestroyedRef.current = meteorDestroyed
-  }, [meteorDestroyed])
+  // Spawn a new meteor
+  const spawnMeteor = useCallback(() => {
+    if (gameState !== 'playing' || lives <= 0 || spawnLockRef.current) return
 
-  // Game loop - meteor falling
+    spawnLockRef.current = true
+
+    const nextQuestion = getNextQuestion()
+    if (!nextQuestion) {
+      spawnLockRef.current = false
+      return
+    }
+
+    const newMeteorId = meteorIdCounterRef.current++
+    const newMeteor = {
+      id: newMeteorId,
+      question: nextQuestion,
+      position: GAME_CONFIG.METEOR_START_Y,
+      destroyed: false,
+      isActive: false
+    }
+
+    setMeteors(prevMeteors => {
+      const updated = [...prevMeteors, newMeteor]
+      const firstActiveIndex = updated.findIndex(m => !m.destroyed)
+      return updated.map((meteor, index) => ({
+        ...meteor,
+        isActive: !meteor.destroyed && index === firstActiveIndex
+      }))
+    })
+
+    isProcessingAnswerRef.current = false
+    setDisabled(false)
+    setShowFeedback(false)
+    setLastAnswerIndex(null)
+    setDisabledOptions([])
+    setExplodingOption(null)
+    setFeedbackMeteorId(null)
+
+    spawnLockRef.current = false
+  }, [gameState, lives, getNextQuestion])
+  
+  // Automatic meteor spawning timer
   useEffect(() => {
-    if (gameState !== 'playing' || !currentQuestion || meteorDestroyed) return
+    if (gameState !== 'playing' || lives <= 0) {
+      if (spawnTimerRef.current) {
+        clearInterval(spawnTimerRef.current)
+        spawnTimerRef.current = null
+      }
+      return
+    }
+    
+    // Spawn first meteor immediately
+    if (meteors.length === 0 && questionsPool.length > 0) {
+      spawnMeteor()
+    }
+    
+    // Set up interval for spawning
+    spawnTimerRef.current = setInterval(() => {
+      spawnMeteor()
+    }, GAME_CONFIG.SPAWN_DELAY)
+    
+    return () => {
+      if (spawnTimerRef.current) {
+        clearInterval(spawnTimerRef.current)
+        spawnTimerRef.current = null
+      }
+    }
+  }, [gameState, lives, meteors.length, questionsPool.length, spawnMeteor])
+  
+  // Game loop - meteor falling for all meteors
+  useEffect(() => {
+    if (gameState !== 'playing' || meteors.length === 0) return
     
     lastTimeRef.current = Date.now()
     
     const animate = () => {
-      if (meteorDestroyedRef.current) {
-        if (animationFrameRef.current) {
-          cancelAnimationFrame(animationFrameRef.current)
-        }
-        return
-      }
-      
       const currentTime = Date.now()
       const deltaTime = (currentTime - lastTimeRef.current) / 1000 // Convert to seconds
       lastTimeRef.current = currentTime
       
-      setMeteorPosition(prev => {
-        // Speed is calibrated for 60fps, so multiply by deltaTime * 60 to normalize
-        const newPos = prev + (fallSpeedRef.current * deltaTime * 60)
-        return newPos
+      setMeteors(prev => {
+        return prev.map(meteor => {
+          if (meteor.destroyed) return meteor
+          
+          const fallSpeed = FALL_SPEEDS[meteor.question.difficulty || 'medium']
+          const newPosition = meteor.position + (fallSpeed * deltaTime * 60)
+          return {
+            ...meteor,
+            position: newPosition
+          }
+        })
       })
+      
       animationFrameRef.current = requestAnimationFrame(animate)
     }
     
@@ -106,38 +216,46 @@ function MeteorGame() {
         cancelAnimationFrame(animationFrameRef.current)
       }
     }
-  }, [gameState, currentQuestion, meteorDestroyed])
+  }, [gameState, meteors.length])
   
-  const spawnNextMeteor = useCallback(() => {
-    if (questionQueue.length <= 1) {
-      // Reshuffle and continue
-      const topicId = storageService.getCurrentTopic()
-      const content = storageService.getContent(topicId)
-      const meteorQuestions = content.items.map(item => 
-        questionAdapter.toMeteorFormat(item)
-      )
-      const shuffled = [...meteorQuestions].sort(() => Math.random() - 0.5)
-      setQuestionQueue(shuffled)
-      setCurrentQuestion(shuffled[0])
-    } else {
-      setCurrentQuestion(questionQueue[1])
-      setQuestionQueue(prev => prev.slice(1))
-    }
+  // Update active meteor ID ref and meteors ref when meteors change
+  useEffect(() => {
+    meteorsRef.current = meteors
+  }, [meteors])
+  
+  // Update gameState ref when gameState changes
+  useEffect(() => {
+    gameStateRef.current = gameState
+  }, [gameState])
+  
+  // Remove destroyed meteors after animation
+  useEffect(() => {
+    const destroyedMeteors = meteors.filter(m => m.destroyed)
+    if (destroyedMeteors.length === 0) return
     
-    setMeteorPosition(GAME_CONFIG.METEOR_START_Y)
-    setMeteorKey(prev => prev + 1) // Force remount of meteor with new X position
-    setDisabled(false)
-    setShowFeedback(false)
-    setLastAnswerIndex(null)
-    setMeteorDestroyed(false)
-    setDisabledOptions([])
-    setExplodingOption(null)
-    setLifeRemovedForCurrentMeteor(false)
-    meteorDestroyedRef.current = false
-  }, [questionQueue])
+    const timer = setTimeout(() => {
+      setMeteors(prev => {
+        const filtered = prev.filter(m => !m.destroyed)
+        // Make sure only first meteor is active if there are any left
+        if (filtered.length > 0) {
+          // Remove active status from all and make first one active
+          return filtered.map((m, index) => ({
+            ...m,
+            isActive: index === 0
+          }))
+        }
+        return filtered
+      })
+    }, 400) // Wait for explosion animation
+    
+    return () => clearTimeout(timer)
+  }, [meteors])
   
-  const handleMeteorHitGround = useCallback(() => {
-    if (disabled || lifeRemovedForCurrentMeteor) return // Already handled or life already removed
+  const handleMeteorHitGround = useCallback((meteorId) => {
+    if (gameState !== 'playing') return
+    
+    const meteor = meteorsRef.current.find(m => m.id === meteorId)
+    if (!meteor || lifeRemovedForMeteorRef.current.has(meteorId)) return
     
     // Hide warning on first meteor hit
     if (!warningHiddenRef.current) {
@@ -145,35 +263,84 @@ function MeteorGame() {
       warningHiddenRef.current = true
     }
     
+    lifeRemovedForMeteorRef.current.add(meteorId)
+    
     setDisabled(true)
-    setLives(prev => {
-      const newLives = prev - 1
+    
+    // Check lives BEFORE updating to prevent issues
+    setLives(prevLives => {
+      const newLives = prevLives - 1
       if (newLives <= 0) {
         setGameState('gameover')
+        return 0
       }
       return newLives
     })
+    
     setStreak(0)
     
     // Update progress as incorrect
     const topicId = storageService.getCurrentTopic()
     const content = storageService.getContent(topicId)
     const questionItem = content.items.find(item => 
-      item.question === currentQuestion.question
+      item.question === meteor.question.question
     )
     if (questionItem) {
       progressService.updateProgress(questionItem.id, false, 'meteor')
     }
     
-    setTimeout(() => {
-      if (lives - 1 > 0) {
-        spawnNextMeteor()
+    // Mark meteor as destroyed and update active status
+    setMeteors(prev => {
+      const updated = prev.map(m => 
+        m.id === meteorId ? { ...m, destroyed: true } : m
+      )
+
+      const firstActiveIndex = updated.findIndex(m => !m.destroyed)
+      if (firstActiveIndex === -1) {
+        return updated
       }
-    }, 1500)
-  }, [disabled, lives, currentQuestion, spawnNextMeteor, lifeRemovedForCurrentMeteor])
+
+      return updated.map((m, index) => ({
+        ...m,
+        isActive: !m.destroyed && index === firstActiveIndex
+      }))
+    })
+  }, [gameState])
   
+  const resetAnswerState = useCallback((options = {}) => {
+    const { preserveExplosion = false } = options
+
+    requestAnimationFrame(() => {
+      if (gameStateRef.current === 'playing') {
+        setDisabled(false)
+        setShowFeedback(false)
+        setLastAnswerIndex(null)
+        setDisabledOptions([])
+        if (preserveExplosion) {
+          setTimeout(() => setExplodingOption(null), 200)
+        } else {
+          setExplodingOption(null)
+        }
+        setFeedbackMeteorId(null)
+      } else if (!preserveExplosion) {
+        setExplodingOption(null)
+      }
+
+      isProcessingAnswerRef.current = false
+    })
+  }, [])
+
   const handleAnswer = useCallback((answerIndex) => {
-    if (disabled) return
+    // Guard against rapid clicks and disabled state
+    if (disabled || isProcessingAnswerRef.current || gameState !== 'playing') return
+    
+    // Find active meteor using ref (no setState needed)
+    const activeMeteor = meteorsRef.current.find(m => m.isActive && !m.destroyed)
+    
+    if (!activeMeteor) return
+    
+    // Set processing flag to prevent multiple simultaneous calls
+    isProcessingAnswerRef.current = true
     
     // Hide warning on first meteor answer
     if (!warningHiddenRef.current) {
@@ -181,30 +348,58 @@ function MeteorGame() {
       warningHiddenRef.current = true
     }
     
+    // Do all side effects OUTSIDE of setMeteors
     setDisabled(true)
     setLastAnswerIndex(answerIndex)
     setShowFeedback(true)
+    setFeedbackMeteorId(activeMeteor.id)
     
-    const isCorrect = currentQuestion.acceptableAnswers.some(acceptable => 
-      currentQuestion.options[answerIndex].toLowerCase().trim() === acceptable
+    const isCorrect = activeMeteor.question.acceptableAnswers.some(acceptable => 
+      activeMeteor.question.options[answerIndex].toLowerCase().trim() === acceptable
     )
     
     setQuestionsAnswered(prev => prev + 1)
     
     if (isCorrect) {
-      // Immediately destroy the meteor
-      setMeteorDestroyed(true)
-      meteorDestroyedRef.current = true
+      // Correct answer - destroy active meteor
+      setMeteors(prev => {
+        const updated = prev.map(m => 
+          m.id === activeMeteor.id ? { ...m, destroyed: true } : m
+        )
+
+        const hasAliveMeteor = updated.some(m => !m.destroyed)
+        let combined = updated
+
+        if (!hasAliveMeteor) {
+          const replacementQuestion = getNextQuestion()
+          if (replacementQuestion) {
+            const newMeteorId = meteorIdCounterRef.current++
+            const replacementMeteor = {
+              id: newMeteorId,
+              question: replacementQuestion,
+              position: GAME_CONFIG.METEOR_START_Y,
+              destroyed: false,
+              isActive: false
+            }
+            combined = [...updated, replacementMeteor]
+          }
+        }
+
+        const firstActiveIndex = combined.findIndex(m => !m.destroyed)
+        if (firstActiveIndex === -1) {
+          return combined
+        }
+
+        return combined.map((m, index) => ({
+          ...m,
+          isActive: !m.destroyed && index === firstActiveIndex
+        }))
+      })
       
-      // Stop animation
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-      }
-      
-      // Correct answer
+      // Calculate score
       const points = calculateScore(
-        currentQuestion.difficulty || 'medium',
-        meteorPosition,
+        activeMeteor.question.difficulty || 'medium',
+        activeMeteor.position,
         streak
       )
       
@@ -226,76 +421,72 @@ function MeteorGame() {
       const topicId = storageService.getCurrentTopic()
       const content = storageService.getContent(topicId)
       const questionItem = content.items.find(item => 
-        item.question === currentQuestion.question
+        item.question === activeMeteor.question.question
       )
       if (questionItem) {
         progressService.updateProgress(questionItem.id, true, 'meteor')
       }
       
-      // Spawn next meteor after explosion animation
-      setTimeout(() => {
-        spawnNextMeteor()
-      }, 400)
+      resetAnswerState()
     } else {
-      // Wrong answer - remove life immediately and swap question
-      setStreak(0)
-      fallSpeedRef.current = fallSpeedRef.current * 2
+      // Wrong answer - swap question on same meteor
+      const wrongMeteorId = activeMeteor.id
+      const wrongMeteorQuestion = activeMeteor.question
       
+      setStreak(0)
       setExplodingOption(answerIndex)
       
-      // Remove life immediately
-      setLifeRemovedForCurrentMeteor(true)
-      setLives(prev => {
-        const newLives = prev - 1
-        if (newLives <= 0) {
-          setGameState('gameover')
-        }
-        return newLives
-      })
+      // Remove life immediately - check BEFORE updating to prevent game over issues
+      if (!lifeRemovedForMeteorRef.current.has(wrongMeteorId)) {
+        lifeRemovedForMeteorRef.current.add(wrongMeteorId)
+        setLives(prev => {
+          const newLives = prev - 1
+          if (newLives <= 0) {
+            setGameState('gameover')
+            isProcessingAnswerRef.current = false
+            return 0
+          }
+          return newLives
+        })
+      }
       
       // Update progress as incorrect
       const topicId = storageService.getCurrentTopic()
       const content = storageService.getContent(topicId)
       const questionItem = content.items.find(item => 
-        item.question === currentQuestion.question
+        item.question === wrongMeteorQuestion.question
       )
       if (questionItem) {
         progressService.updateProgress(questionItem.id, false, 'meteor')
       }
       
-      // After flash animation, swap question on same meteor
-      setTimeout(() => {
-        setExplodingOption(null)
-        
-        // Swap question (similar to spawnNextMeteor but keep meteor position)
-        let nextQuestion
-        if (questionQueue.length <= 1) {
-          // Reshuffle and continue
-          const topicId = storageService.getCurrentTopic()
-          const content = storageService.getContent(topicId)
-          const meteorQuestions = content.items.map(item => 
-            questionAdapter.toMeteorFormat(item)
+      // Swap question immediately on the same meteor
+      if (gameStateRef.current !== 'playing') {
+        isProcessingAnswerRef.current = false
+        return
+      }
+
+      const nextQuestion = getNextQuestion()
+      if (!nextQuestion) {
+        resetAnswerState({ preserveExplosion: true })
+        return
+      }
+
+      setMeteors(current => {
+        const stillActive = current.find(m => m.id === wrongMeteorId && !m.destroyed)
+        if (stillActive && gameStateRef.current === 'playing') {
+          return current.map(m => 
+            m.id === wrongMeteorId 
+              ? { ...m, question: nextQuestion }
+              : m
           )
-          const shuffled = [...meteorQuestions].sort(() => Math.random() - 0.5)
-          setQuestionQueue(shuffled)
-          nextQuestion = shuffled[0]
-          setCurrentQuestion(nextQuestion)
-        } else {
-          nextQuestion = questionQueue[1]
-          setCurrentQuestion(nextQuestion)
-          setQuestionQueue(prev => prev.slice(1))
         }
-        
-        // Reset states to allow answering new question
-        setDisabled(false)
-        setShowFeedback(false)
-        setLastAnswerIndex(null)
-        setDisabledOptions([])
-        setExplodingOption(null)
-        fallSpeedRef.current = FALL_SPEEDS[nextQuestion.difficulty || 'medium']
-      }, 600)
+        return current
+      })
+
+      resetAnswerState({ preserveExplosion: true })
     }
-  }, [disabled, currentQuestion, meteorPosition, streak, spawnNextMeteor])
+  }, [disabled, streak, gameState, getNextQuestion, resetAnswerState])
   
   const handlePause = () => {
     setGameState(prev => prev === 'playing' ? 'paused' : 'playing')
@@ -309,39 +500,40 @@ function MeteorGame() {
     setHighestStreak(0)
     setQuestionsAnswered(0)
     setCorrectAnswers(0)
-    setMeteorPosition(GAME_CONFIG.METEOR_START_Y)
-    setMeteorKey(prev => prev + 1)
+    setMeteors([])
     setDisabled(false)
     setShowFeedback(false)
     setShowWarning(true)
-    setMeteorDestroyed(false)
     setDisabledOptions([])
     setExplodingOption(null)
-    setLifeRemovedForCurrentMeteor(false)
-    meteorDestroyedRef.current = false
+    setLastOptions([])
+    setLastCorrectIndex(-1)
+    setFeedbackMeteorId(null)
+    setLastAnswerIndex(null)
     warningHiddenRef.current = false
-    
-    // Reload questions
+    meteorIdCounterRef.current = 0
+    lifeRemovedForMeteorRef.current.clear()
+    isProcessingAnswerRef.current = false
+    meteorsRef.current = []
+    gameStateRef.current = 'playing'
+    questionBufferRef.current = []
+
     const topicId = storageService.getCurrentTopic()
     const content = storageService.getContent(topicId)
-    const meteorQuestions = content.items.map(item => 
+    const meteorQuestions = content?.items.map(item => 
       questionAdapter.toMeteorFormat(item)
-    )
-    const shuffled = [...meteorQuestions].sort(() => Math.random() - 0.5)
-    setQuestionQueue(shuffled)
-    setCurrentQuestion(shuffled[0])
+    ) || []
+
+    baseQuestionsRef.current = meteorQuestions
+    questionBufferRef.current = []
+    refillQuestionBuffer()
+    setQuestionsPool(meteorQuestions)
+    spawnLockRef.current = false
   }
   
   const handleReturnToMenu = () => {
     navigate('/hub')
   }
-  
-  // Update fall speed when question changes
-  useEffect(() => {
-    if (currentQuestion) {
-      fallSpeedRef.current = FALL_SPEEDS[currentQuestion.difficulty || 'medium']
-    }
-  }, [currentQuestion])
   
   // Keyboard shortcuts
   useEffect(() => {
@@ -359,15 +551,67 @@ function MeteorGame() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [navigate])
   
-  if (!currentQuestion) {
-    return <div className="loading">Loading game...</div>
-  }
-  
-  const correctIndex = currentQuestion.options.findIndex(option =>
-    currentQuestion.acceptableAnswers.some(acceptable =>
+  const activeMeteor = meteors.find(m => m.isActive && !m.destroyed)
+  const correctIndex = activeMeteor?.question.options.findIndex(option =>
+    activeMeteor?.question.acceptableAnswers.some(acceptable =>
       option.toLowerCase().trim() === acceptable
     )
-  )
+  ) ?? -1
+  const isLoading = questionsPool.length === 0 && meteors.length === 0
+
+  useEffect(() => {
+    if (gameState !== 'playing' || lives <= 0) {
+      return
+    }
+
+    if (!activeMeteor && !spawnLockRef.current) {
+      spawnMeteor()
+    }
+  }, [activeMeteor, gameState, lives, spawnMeteor])
+
+  useEffect(() => {
+    if (activeMeteor?.question?.options?.length) {
+      setLastOptions(activeMeteor.question.options)
+      setLastCorrectIndex(correctIndex)
+    }
+  }, [activeMeteor, correctIndex])
+
+  useEffect(() => {
+    if (activeMeteor && feedbackMeteorId !== null && activeMeteor.id !== feedbackMeteorId) {
+      setShowFeedback(false)
+      setLastAnswerIndex(null)
+      setFeedbackMeteorId(null)
+    }
+  }, [activeMeteor, feedbackMeteorId])
+
+  useEffect(() => {
+    if (activeMeteor && disabled && !showFeedback && !isProcessingAnswerRef.current) {
+      setDisabled(false)
+      setDisabledOptions([])
+      setExplodingOption(null)
+    }
+  }, [activeMeteor, disabled, showFeedback])
+
+  useEffect(() => {
+    if (!activeMeteor && showFeedback) {
+      setShowFeedback(false)
+      setLastAnswerIndex(null)
+      setFeedbackMeteorId(null)
+    }
+  }, [activeMeteor, showFeedback])
+
+  const displayOptions = activeMeteor?.question?.options ?? lastOptions
+  const resolvedOptions = Array.isArray(displayOptions) && displayOptions.length > 0
+    ? displayOptions
+    : ['Preparing next meteor...', 'Preparing next meteor...', 'Preparing next meteor...', 'Preparing next meteor...']
+  const effectiveCorrectIndex = activeMeteor ? correctIndex : lastCorrectIndex
+  const pendingQuestions = questionBufferRef.current.length
+  const shouldDisableButtons = disabled || !activeMeteor
+  const shouldShowWaitingIndicator = gameState === 'playing' && !activeMeteor && pendingQuestions === 0
+ 
+  if (isLoading) {
+    return <div className="loading">Loading game...</div>
+  }
   
   return (
     <div className="meteor-game">
@@ -381,24 +625,32 @@ function MeteorGame() {
       <div className="meteor-game-area">
         {gameState === 'playing' && (
           <>
-            <Meteor 
-              key={meteorKey}
-              question={currentQuestion.question}
-              difficulty={currentQuestion.difficulty || 'medium'}
-              position={meteorPosition}
-              onHitGround={handleMeteorHitGround}
-              destroyed={meteorDestroyed}
-            />
-            
+            {meteors.map(meteor => (
+              <Meteor 
+                key={meteor.id}
+                id={meteor.id}
+                question={meteor.question.question}
+                difficulty={meteor.question.difficulty || 'medium'}
+                position={meteor.position}
+                onHitGround={handleMeteorHitGround}
+                destroyed={meteor.destroyed}
+              />
+            ))}
             <AnswerButtons 
-              options={currentQuestion.options}
+              options={resolvedOptions}
               onAnswer={handleAnswer}
-              disabled={disabled}
-              correctIndex={correctIndex}
-              showFeedback={showFeedback}
+              disabled={shouldDisableButtons}
+              correctIndex={effectiveCorrectIndex}
+              showFeedback={showFeedback && !!activeMeteor}
               disabledOptions={disabledOptions}
               explodingOption={explodingOption}
             />
+            {shouldShowWaitingIndicator && (
+              <div className="answer-waiting-indicator">
+                <div className="answer-spinner" aria-hidden="true"></div>
+                <span>Preparing next meteor...</span>
+              </div>
+            )}
           </>
         )}
         
@@ -438,4 +690,3 @@ function MeteorGame() {
 }
 
 export default MeteorGame
-

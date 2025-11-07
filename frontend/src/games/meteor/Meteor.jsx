@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { getMeteorStyle } from './gameLogic'
 import './MeteorGame.css'
 
-function Meteor({ question, difficulty, position, onHitGround, destroyed }) {
+function Meteor({ id, question, difficulty, position, onHitGround, destroyed }) {
   const style = getMeteorStyle(difficulty)
   
   // Generate random X position only once per meteor
@@ -10,9 +10,9 @@ function Meteor({ question, difficulty, position, onHitGround, destroyed }) {
   
   useEffect(() => {
     if (position >= 85 && !destroyed) { // Ground position
-      onHitGround()
+      onHitGround(id)
     }
-  }, [position, onHitGround, destroyed])
+  }, [position, onHitGround, destroyed, id])
   
   return (
     <div 

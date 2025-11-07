@@ -530,12 +530,12 @@ location.reload()
 ## Roadmap
 
 ### Phase 1: Foundation (Completed)
-- ✅ Universal data format
-- ✅ Storage service (localStorage)
-- ✅ Progress tracking system
-- ✅ Multi-page routing
-- ✅ Game Hub dashboard
-- ✅ Quiz game integration
+-  Universal data format
+-  Storage service (localStorage)
+-  Progress tracking system
+-  Multi-page routing
+-  Game Hub dashboard
+-  Quiz game integration
 
 ### Phase 2: New Games (In Progress)
 - 🚧 Meteor Drop game
